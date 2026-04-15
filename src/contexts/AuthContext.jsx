@@ -7,7 +7,7 @@ import {
   updateProfile,
   sendPasswordResetEmail,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
 const AuthContext = createContext();
@@ -30,9 +30,24 @@ export const AuthProvider = ({ children }) => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
-        const profileDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        const profileDoc = await getDoc(userRef);
         if (profileDoc.exists()) {
           setUserProfile(profileDoc.data());
+        } else {
+          // Recrear documento si fue borrado accidentalmente
+          const newProfile = {
+            uid: firebaseUser.uid,
+            displayName: firebaseUser.displayName || firebaseUser.email,
+            email: firebaseUser.email,
+            totalPoints: 0,
+            correctResults: 0,
+            exactScores: 0,
+            teamAdvances: 0,
+            createdAt: new Date().toISOString(),
+          };
+          await setDoc(userRef, newProfile);
+          setUserProfile(newProfile);
         }
       } else {
         setUser(null);
