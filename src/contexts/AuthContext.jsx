@@ -5,6 +5,7 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
@@ -60,10 +61,11 @@ export const AuthProvider = ({ children }) => {
 
   const login = (email, password) => signInWithEmailAndPassword(auth, email, password);
   const logout = () => signOut(auth);
+  const resetPassword = (email) => sendPasswordResetEmail(auth, email);
   const isAdmin = user?.uid === ADMIN_UID;
 
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, register, login, logout, isAdmin }}>
+    <AuthContext.Provider value={{ user, userProfile, loading, register, login, logout, resetPassword, isAdmin }}>
       {!loading && children}
     </AuthContext.Provider>
   );

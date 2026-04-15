@@ -3,12 +3,16 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 export const LoginPage = () => {
-  const { login } = useAuth();
+  const { login, resetPassword } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetMsg, setResetMsg] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,11 +28,25 @@ export const LoginPage = () => {
     }
   };
 
+  const handleReset = async (e) => {
+    e.preventDefault();
+    setResetMsg('');
+    setResetLoading(true);
+    try {
+      await resetPassword(resetEmail);
+      setResetMsg('✅ Te enviamos un correo para restablecer tu contraseña. Revisa tu bandeja de entrada.');
+    } catch {
+      setResetMsg('❌ No encontramos ese correo. Verifica que esté bien escrito.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="auth-screen">
       <div className="auth-logo">
-        <div className="auth-logo-title">La Quiniela Mundialista</div>
-        <div className="auth-logo-sub">Copa Mundial de la FIFA 2026™ <br />USA · CAN · MEX</div>
+        <div className="auth-logo-title">La Quiniela</div>
+        <div className="auth-logo-sub">Mundial 2026 · USA · CAN · MEX</div>
       </div>
       <div className="auth-card">
         <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, marginBottom: 20, letterSpacing: '0.04em' }}>
@@ -62,6 +80,37 @@ export const LoginPage = () => {
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
+
+        <div style={{ textAlign: 'center', marginTop: 12 }}>
+          <span
+            onClick={() => { setShowReset(!showReset); setResetMsg(''); }}
+            style={{ fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer', textDecoration: 'underline' }}
+          >
+            ¿Olvidaste tu contraseña?
+          </span>
+        </div>
+
+        {showReset && (
+          <form onSubmit={handleReset} style={{ marginTop: 12, padding: '14px', background: '#f5f7fa', borderRadius: 10 }}>
+            <div style={{ fontSize: 13, color: 'var(--text-mid)', marginBottom: 8 }}>
+              Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.
+            </div>
+            <input
+              className="form-input"
+              type="email"
+              value={resetEmail}
+              onChange={e => setResetEmail(e.target.value)}
+              placeholder="tu@correo.com"
+              required
+              style={{ marginBottom: 8 }}
+            />
+            {resetMsg && <div style={{ fontSize: 13, marginBottom: 8, color: resetMsg.startsWith('✅') ? 'green' : 'red' }}>{resetMsg}</div>}
+            <button className="primary-btn" type="submit" disabled={resetLoading} style={{ fontSize: 13, padding: '10px' }}>
+              {resetLoading ? 'Enviando...' : 'Enviar enlace'}
+            </button>
+          </form>
+        )}
+
         <div className="divider" />
         <div className="text-center text-muted">
           ¿No tienes cuenta?{' '}
@@ -107,8 +156,8 @@ export const RegisterPage = () => {
   return (
     <div className="auth-screen">
       <div className="auth-logo">
-        <div className="auth-logo-title">La Quiniela Mundialista</div>
-        <div className="auth-logo-sub">Copa Mundial de la FIFA 2026™ <br />USA · CAN · MEX</div>
+        <div className="auth-logo-title">La Quiniela</div>
+        <div className="auth-logo-sub">Mundial 2026 · USA · CAN · MEX</div>
       </div>
       <div className="auth-card">
         <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, marginBottom: 20, letterSpacing: '0.04em' }}>
