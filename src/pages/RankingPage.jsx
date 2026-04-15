@@ -12,11 +12,19 @@ const RankingPage = () => {
   useEffect(() => {
     const q = query(
       collection(db, 'users'),
-      orderBy('totalPoints', 'desc'),
-      orderBy('teamAdvances', 'desc')
+      orderBy('totalPoints', 'desc')
     );
     const unsub = onSnapshot(q, snap => {
-      setPlayers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Ordenar por teamAdvances como desempate en el cliente
+      data.sort((a, b) => {
+        if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+        return (b.teamAdvances || 0) - (a.teamAdvances || 0);
+      });
+      setPlayers(data);
+      setLoading(false);
+    }, (error) => {
+      console.error('Ranking error:', error);
       setLoading(false);
     });
     return unsub;
