@@ -35,7 +35,7 @@ h1, h2, h3, h4 {
 
 /* Layout principal */
 .app-shell {
-  max-width: 480px;
+  max-width: 650px;
   margin: 0 auto;
   min-height: 100vh;
   background: var(--surface);
@@ -215,11 +215,14 @@ h1, h2, h3, h4 {
 
 .team-side {
   flex: 1;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 
-.team-flag { font-size: 28px; display: block; margin-bottom: 4px; }
-.team-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.team-flag { font-size: 28px; }
+.team-name { font-size: 13px; font-weight: 500; color: var(--text); text-align: center; }
 .score-display { font-family: 'Bebas Neue', sans-serif; font-size: 24px; color: var(--navy); padding: 0 4px; }
 
 /* Prediction buttons */

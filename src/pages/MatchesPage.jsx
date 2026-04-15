@@ -5,7 +5,20 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { FLAGS, EXACT_SCORE_PHASES, PHASE_LABELS } from '../data/worldCupData';
+import { FLAGS, COUNTRY_CODES, EXACT_SCORE_PHASES, PHASE_LABELS } from '../data/worldCupData';
+
+const FlagImg = ({ team, size = 48 }) => {
+  const code = COUNTRY_CODES[team];
+  if (!code) return <span style={{ fontSize: size * 0.7 }}>{FLAGS[team] || '🏳'}</span>;
+  return (
+    <img
+      src={`https://flagcdn.com/w80/${code}.png`}
+      alt={team}
+      style={{ width: size, height: size * 0.67, objectFit: 'cover', borderRadius: 4, boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }}
+      onError={e => { e.target.style.display = 'none'; }}
+    />
+  );
+};
 import { calculatePredictionPoints } from '../utils/points';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -84,7 +97,7 @@ const MatchCard = ({ match, userId }) => {
 
       <div className="teams-row">
         <div className="team-side">
-          <span className="team-flag">{FLAGS[match.teamA] || '🏳'}</span>
+          <FlagImg team={match.teamA} size={48} />
           <span className="team-name">{match.teamA}</span>
         </div>
         {match.result
@@ -92,7 +105,7 @@ const MatchCard = ({ match, userId }) => {
           : <span style={{ fontSize: 13, color: 'var(--text-muted)', padding: '0 4px' }}>vs</span>
         }
         <div className="team-side">
-          <span className="team-flag">{FLAGS[match.teamB] || '🏳'}</span>
+          <FlagImg team={match.teamB} size={48} />
           <span className="team-name">{match.teamB}</span>
         </div>
       </div>
