@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  collection, addDoc, updateDoc, doc, onSnapshot,
+  collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot,
   query, orderBy, serverTimestamp, writeBatch, getDocs
 } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -8,6 +8,42 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { PHASES, PHASE_LABELS, FLAGS, GROUPS } from '../data/worldCupData';
 import { calculatePredictionPoints } from '../utils/points';
+
+// --- Helper: recalcular puntos de usuarios afectados por un partido ---
+const recalcularPuntos = async (matchId, matchConResultado) => {
+  // 1. Obtener todas las predicciones de este partido
+  const todasPreds = await getDocs(collection(db, 'predictions'));
+  const predsPartido = todasPreds.docs.filter(d => d.data().matchId === matchId);
+
+  // 2. Actualizar pointsAwarded en cada predicción
+  const batch = writeBatch(db);
+  for (const predDoc of predsPartido) {
+    const pts = calculatePredictionPoints(predDoc.data(), matchConResultado);
+    batch.update(predDoc.ref, { pointsAwarded: pts });
+  }
+  await batch.commit();
+
+  // 3. Re-obtener predicciones actualizadas
+  const predsActualizadas = await getDocs(collection(db, 'predictions'));
+
+  // 4. Recalcular totales de cada usuario afectado
+  const usuariosAfectados = [...new Set(predsPartido.map(d => d.data().userId))];
+  for (const userId of usuariosAfectados) {
+    const predsUsuario = predsActualizadas.docs.filter(d => d.data().userId === userId);
+    let total = 0, correct = 0, exact = 0;
+    for (const up of predsUsuario) {
+      const awarded = up.data().pointsAwarded || 0;
+      total += awarded;
+      if (awarded >= 3) correct++;
+      if (awarded >= 5) exact++;
+    }
+    await updateDoc(doc(db, 'users', userId), {
+      totalPoints: total,
+      correctResults: correct,
+      exactScores: exact,
+    });
+  }
+};
 
 // --- Add Match Form ---
 const AddMatchForm = ({ onSaved }) => {
@@ -133,75 +169,8 @@ const MatchResultEntry = ({ match }) => {
       const a = parseInt(scoreA);
       const b = parseInt(scoreB);
       const result = { teamAScore: a, teamBScore: b, winner: getWinner(a, b) };
-
-      // Update match
       await updateDoc(doc(db, 'matches', match.id), { result, isOpen: false });
-
-      // Recalculate points for all predictions of this match
-      const predsSnap = await getDocs(
-        query(collection(db, 'predictions'))
-      );
-      const batch = writeBatch(db);
-      const matchWithResult = { ...match, result };
-
-      // Get all predictions for this match
-      const matchPreds = predsSnap.docs.filter(d => d.data().matchId === match.id);
-
-      for (const predDoc of matchPreds) {
-        const pred = predDoc.data();
-        const pts = calculatePredictionPoints(pred, matchWithResult);
-        const userRef = doc(db, 'users', pred.userId);
-
-        // We store points per prediction then sum — simplified: just track total
-        const prevPts = pred.pointsAwarded || 0;
-        const diff = pts - prevPts;
-
-        // Update prediction doc with points
-        batch.update(predDoc.ref, { pointsAwarded: pts });
-
-        // Update user totals — increment diff
-        if (diff !== 0) {
-          const isExact = pts >= 5 && pts > prevPts;
-          batch.update(userRef, {
-            totalPoints: (await getDocs(collection(db, 'users'))).docs // simplified
-              .find(d => d.id === pred.userId)?.data()?.totalPoints || 0,
-          });
-        }
-      }
-
-      // Simpler approach: recalculate all predictions for this match and update users
-      for (const predDoc of matchPreds) {
-        const pred = predDoc.data();
-        const pts = calculatePredictionPoints(pred, matchWithResult);
-        const prevPts = pred.pointsAwarded || 0;
-        const diff = pts - prevPts;
-        if (diff !== 0) {
-          batch.update(predDoc.ref, { pointsAwarded: pts });
-        }
-      }
-
-      await batch.commit();
-
-      // Update user totals by recalculating from all their predictions
-      for (const predDoc of matchPreds) {
-        const pred = predDoc.data();
-        const pts = calculatePredictionPoints(pred, matchWithResult);
-        const prevPts = pred.pointsAwarded || 0;
-        const diff = pts - prevPts;
-        if (diff !== 0) {
-          const allUserPreds = predsSnap.docs.filter(d => d.data().userId === pred.userId);
-          let total = 0, correct = 0, exact = 0;
-          for (const up of allUserPreds) {
-            const upData = up.data();
-            const awarded = up.id === predDoc.id ? pts : (upData.pointsAwarded || 0);
-            total += awarded;
-            if (awarded >= 3) correct++;
-            if (awarded >= 5) exact++;
-          }
-          await updateDoc(doc(db, 'users', pred.userId), { totalPoints: total, correctResults: correct, exactScores: exact });
-        }
-      }
-
+      await recalcularPuntos(match.id, { ...match, result });
       setMsg('✓ Resultado guardado y puntos actualizados');
     } catch (e) {
       setMsg('Error al guardar: ' + e.message);
@@ -222,17 +191,33 @@ const MatchResultEntry = ({ match }) => {
         <div style={{ fontWeight: 500, fontSize: 13 }}>
           {FLAGS[match.teamA] || ''} {match.teamA} vs {FLAGS[match.teamB] || ''} {match.teamB}
         </div>
-        <button
-          onClick={toggleOpen}
-          style={{
-            fontSize: 11, padding: '2px 10px', borderRadius: 20, cursor: 'pointer', border: 'none',
-            background: isOpen ? 'var(--green-pale)' : '#fee2e2',
-            color: isOpen ? '#15803d' : '#991b1b',
-            fontFamily: "'DM Sans', sans-serif",
-          }}
-        >
-          {isOpen ? 'Abierto' : 'Cerrado'}
-        </button>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button
+            onClick={toggleOpen}
+            style={{
+              fontSize: 11, padding: '2px 10px', borderRadius: 20, cursor: 'pointer', border: 'none',
+              background: isOpen ? 'var(--green-pale)' : '#fee2e2',
+              color: isOpen ? '#15803d' : '#991b1b',
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            {isOpen ? 'Abierto' : 'Cerrado'}
+          </button>
+          <button
+            onClick={async () => {
+              if (window.confirm(`¿Eliminar el partido ${match.teamA} vs ${match.teamB}? Esta acción no se puede deshacer.`)) {
+                await deleteDoc(doc(db, 'matches', match.id));
+              }
+            }}
+            style={{
+              fontSize: 14, padding: '2px 8px', borderRadius: 20, cursor: 'pointer', border: 'none',
+              background: '#fee2e2', color: '#991b1b', fontFamily: "'DM Sans', sans-serif",
+            }}
+            title="Eliminar partido"
+          >
+            🗑️
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -266,6 +251,123 @@ const MatchResultEntry = ({ match }) => {
         </button>
       </div>
       {msg && <div style={{ fontSize: 12, color: 'var(--green)', marginTop: 6, fontWeight: 500 }}>{msg}</div>}
+    </div>
+  );
+};
+
+// --- Completed Match Row (with edit) ---
+const CompletedMatchRow = ({ match }) => {
+  const [editing, setEditing] = useState(false);
+  const [scoreA, setScoreA] = useState(match.result?.teamAScore ?? '');
+  const [scoreB, setScoreB] = useState(match.result?.teamBScore ?? '');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const getWinner = (a, b) => {
+    if (a > b) return 'teamA';
+    if (b > a) return 'teamB';
+    return 'draw';
+  };
+
+  const saveEdit = async () => {
+    if (scoreA === '' || scoreB === '') return;
+    setSaving(true);
+    setMsg('');
+    try {
+      const a = parseInt(scoreA);
+      const b = parseInt(scoreB);
+      const result = { teamAScore: a, teamBScore: b, winner: getWinner(a, b) };
+      await updateDoc(doc(db, 'matches', match.id), { result });
+      await recalcularPuntos(match.id, { ...match, result });
+      setMsg('✓ Marcador corregido y puntos recalculados');
+      setEditing(false);
+    } catch (e) {
+      setMsg('Error: ' + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteMatch = async () => {
+    if (!window.confirm(`¿Eliminar ${match.teamA} vs ${match.teamB}? Se quitarán los puntos ganados a todos los jugadores.`)) return;
+    try {
+      // Get all predictions for this match
+      const predsSnap = await getDocs(query(collection(db, 'predictions')));
+      const matchPreds = predsSnap.docs.filter(d => d.data().matchId === match.id);
+      const batch = writeBatch(db);
+
+      // Delete each prediction and recalculate user totals
+      for (const predDoc of matchPreds) {
+        batch.delete(predDoc.ref);
+      }
+      await batch.commit();
+
+      // Recalculate user totals without this match's points
+      const affectedUsers = [...new Set(matchPreds.map(d => d.data().userId))];
+      const allPreds = predsSnap.docs.filter(d => d.data().matchId !== match.id);
+      for (const userId of affectedUsers) {
+        const userPreds = allPreds.filter(d => d.data().userId === userId);
+        let total = 0, correct = 0, exact = 0;
+        for (const up of userPreds) {
+          const awarded = up.data().pointsAwarded || 0;
+          total += awarded;
+          if (awarded >= 3) correct++;
+          if (awarded >= 5) exact++;
+        }
+        await updateDoc(doc(db, 'users', userId), { totalPoints: total, correctResults: correct, exactScores: exact });
+      }
+
+      // Delete the match
+      await deleteDoc(doc(db, 'matches', match.id));
+    } catch (e) {
+      alert('Error al eliminar: ' + e.message);
+    }
+  };
+
+  if (!editing) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+        <span>{FLAGS[match.teamA] || ''} {match.teamA} vs {FLAGS[match.teamB] || ''} {match.teamB}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: 'var(--navy)' }}>
+            {match.result.teamAScore} - {match.result.teamBScore}
+          </span>
+          <button
+            onClick={() => setEditing(true)}
+            style={{ fontSize: 14, padding: '2px 8px', borderRadius: 20, cursor: 'pointer', border: 'none', background: '#e0e7ff', color: '#3730a3' }}
+            title="Editar marcador"
+          >
+            ✏️
+          </button>
+          <button
+            onClick={deleteMatch}
+            style={{ fontSize: 14, padding: '2px 8px', borderRadius: 20, cursor: 'pointer', border: 'none', background: '#fee2e2', color: '#991b1b' }}
+            title="Eliminar partido"
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ border: '1px solid #e0e7ff', borderRadius: 10, padding: 12, marginBottom: 8, background: '#f8f9ff' }}>
+      <div style={{ fontWeight: 500, fontSize: 13, marginBottom: 8 }}>
+        ✏️ Corregir: {FLAGS[match.teamA] || ''} {match.teamA} vs {FLAGS[match.teamB] || ''} {match.teamB}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <input className="score-input" type="number" min="0" max="20" value={scoreA} onChange={e => setScoreA(e.target.value)} />
+        <span className="score-dash">-</span>
+        <input className="score-input" type="number" min="0" max="20" value={scoreB} onChange={e => setScoreB(e.target.value)} />
+        <button onClick={saveEdit} disabled={saving} style={{ flex: 1, padding: '8px 12px', background: 'var(--navy)', color: '#fff', border: 'none', borderRadius: 8, fontFamily: "'Bebas Neue', sans-serif", fontSize: 15, cursor: 'pointer' }}>
+          {saving ? '...' : 'Guardar'}
+        </button>
+        <button onClick={() => setEditing(false)} style={{ padding: '8px', background: '#f1f5f9', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}>
+          Cancelar
+        </button>
+      </div>
+      {msg && <div style={{ fontSize: 12, color: 'green', marginTop: 6, fontWeight: 500 }}>{msg}</div>}
     </div>
   );
 };
@@ -382,12 +484,7 @@ const AdminPage = () => {
               <>
                 <div className="section-label" style={{ marginTop: 16 }}>Ya con resultado</div>
                 {matches.filter(m => m.result).map(m => (
-                  <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
-                    <span>{FLAGS[m.teamA] || ''} {m.teamA} vs {FLAGS[m.teamB] || ''} {m.teamB}</span>
-                    <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: 'var(--navy)' }}>
-                      {m.result.teamAScore} - {m.result.teamBScore}
-                    </span>
-                  </div>
+                  <CompletedMatchRow key={m.id} match={m} />
                 ))}
               </>
             )}
