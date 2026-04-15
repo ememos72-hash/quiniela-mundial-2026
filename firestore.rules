@@ -1,0 +1,41 @@
+// firestore.rules
+// Copia este contenido en Firebase Console → Firestore → Reglas
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Función para verificar si es admin
+    function isAdmin() {
+      return request.auth.uid == 'sGdnDrst12bNRqBNJNWgGJ6StIw1';
+    }
+
+    // Usuarios: solo pueden leer todos, solo admin o el mismo usuario puede escribir
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId || isAdmin();
+    }
+
+    // Partidos: todos pueden leer, solo admin puede escribir
+    match /matches/{matchId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // Predicciones: puedes leer y escribir las tuyas
+    match /predictions/{predId} {
+      allow read: if request.auth != null &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create, update: if request.auth != null &&
+        request.resource.data.userId == request.auth.uid;
+      allow read: if isAdmin();
+    }
+
+    // Flashes: todos pueden leer, solo admin puede escribir
+    match /flashes/{flashId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+  }
+}
