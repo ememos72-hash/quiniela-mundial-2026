@@ -210,6 +210,7 @@ const MatchesPage = () => {
   const { user } = useAuth();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
   const [userPoints, setUserPoints] = useState({ total: 0, correct: 0, exact: 0 });
 
@@ -217,6 +218,10 @@ const MatchesPage = () => {
     const q = query(collection(db, 'matches'), orderBy('date', 'asc'));
     const unsub = onSnapshot(q, snap => {
       setMatches(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    }, err => {
+      console.error('Error cargando partidos:', err);
+      setError('Error al cargar los partidos. Recarga la página.');
       setLoading(false);
     });
     return unsub;
@@ -252,6 +257,12 @@ const MatchesPage = () => {
     acc[key].push(m);
     return acc;
   }, {});
+
+  if (error) return (
+    <div className="page">
+      <div style={{ textAlign: 'center', padding: 40, color: '#991b1b' }}>{error}</div>
+    </div>
+  );
 
   return (
     <div className="page">
