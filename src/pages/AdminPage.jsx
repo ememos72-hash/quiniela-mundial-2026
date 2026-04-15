@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot,
-  query, orderBy, serverTimestamp, writeBatch, getDocs
+  query, where, orderBy, serverTimestamp, writeBatch, getDocs
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,28 +11,37 @@ import { calculatePredictionPoints } from '../utils/points';
 
 // --- Helper: recalcular puntos de usuarios afectados por un partido ---
 const recalcularPuntos = async (matchId, matchConResultado) => {
-  // 1. Obtener todas las predicciones de este partido
-  const todasPreds = await getDocs(collection(db, 'predictions'));
-  const predsPartido = todasPreds.docs.filter(d => d.data().matchId === matchId);
+  // 1. Obtener predicciones de este partido usando query específico
+  const predsPartidoSnap = await getDocs(
+    query(collection(db, 'predictions'), where('matchId', '==', matchId))
+  );
+  const predsPartido = predsPartidoSnap.docs;
+
+  if (predsPartido.length === 0) return;
 
   // 2. Actualizar pointsAwarded en cada predicción
   const batch = writeBatch(db);
+  const puntosNuevos = {};
   for (const predDoc of predsPartido) {
     const pts = calculatePredictionPoints(predDoc.data(), matchConResultado);
     batch.update(predDoc.ref, { pointsAwarded: pts });
+    puntosNuevos[predDoc.id] = pts;
   }
   await batch.commit();
 
-  // 3. Re-obtener predicciones actualizadas
-  const predsActualizadas = await getDocs(collection(db, 'predictions'));
-
-  // 4. Recalcular totales de cada usuario afectado
+  // 3. Recalcular totales de cada usuario afectado
   const usuariosAfectados = [...new Set(predsPartido.map(d => d.data().userId))];
   for (const userId of usuariosAfectados) {
-    const predsUsuario = predsActualizadas.docs.filter(d => d.data().userId === userId);
+    // Obtener TODAS las predicciones de este usuario
+    const predsUsuarioSnap = await getDocs(
+      query(collection(db, 'predictions'), where('userId', '==', userId))
+    );
     let total = 0, correct = 0, exact = 0;
-    for (const up of predsUsuario) {
-      const awarded = up.data().pointsAwarded || 0;
+    for (const up of predsUsuarioSnap.docs) {
+      // Usar el valor recién calculado si es de este partido
+      const awarded = puntosNuevos[up.id] !== undefined
+        ? puntosNuevos[up.id]
+        : (up.data().pointsAwarded || 0);
       total += awarded;
       if (awarded >= 3) correct++;
       if (awarded >= 5) exact++;
