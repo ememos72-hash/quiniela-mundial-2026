@@ -11,37 +11,44 @@ import { calculatePredictionPoints } from '../utils/points';
 
 // --- Helper: recalcular puntos de usuarios afectados por un partido ---
 const recalcularPuntos = async (matchId, matchConResultado) => {
-  // 1. Obtener predicciones de este partido usando query específico
+  // 1. Obtener predicciones de este partido
   const predsPartidoSnap = await getDocs(
     query(collection(db, 'predictions'), where('matchId', '==', matchId))
   );
   const predsPartido = predsPartidoSnap.docs;
-
   if (predsPartido.length === 0) return;
 
-  // 2. Actualizar pointsAwarded en cada predicción
+  // 2. Actualizar pointsAwarded para predicciones de este partido
   const batch = writeBatch(db);
-  const puntosNuevos = {};
   for (const predDoc of predsPartido) {
     const pts = calculatePredictionPoints(predDoc.data(), matchConResultado);
     batch.update(predDoc.ref, { pointsAwarded: pts });
-    puntosNuevos[predDoc.id] = pts;
   }
   await batch.commit();
 
-  // 3. Recalcular totales de cada usuario afectado
+  // 3. Recalcular totales de cada usuario afectado desde cero
   const usuariosAfectados = [...new Set(predsPartido.map(d => d.data().userId))];
+  // Obtener todos los partidos con resultado para recalcular correctamente
+  const todosPartidosSnap = await getDocs(
+    query(collection(db, 'matches'))
+  );
+  const partidos = {};
+  todosPartidosSnap.docs.forEach(d => { partidos[d.id] = { id: d.id, ...d.data() }; });
+
   for (const userId of usuariosAfectados) {
-    // Obtener TODAS las predicciones de este usuario
     const predsUsuarioSnap = await getDocs(
       query(collection(db, 'predictions'), where('userId', '==', userId))
     );
     let total = 0, correct = 0, exact = 0;
     for (const up of predsUsuarioSnap.docs) {
-      // Usar el valor recién calculado si es de este partido
-      const awarded = puntosNuevos[up.id] !== undefined
-        ? puntosNuevos[up.id]
-        : (up.data().pointsAwarded || 0);
+      const pred = up.data();
+      const matchDelPred = pred.matchId === matchId
+        ? matchConResultado
+        : partidos[pred.matchId];
+      // Recalcular en vivo si hay resultado, si no usar lo guardado
+      const awarded = matchDelPred?.result
+        ? calculatePredictionPoints(pred, matchDelPred)
+        : (pred.pointsAwarded || 0);
       total += awarded;
       if (awarded >= 3) correct++;
       if (awarded >= 5) exact++;
