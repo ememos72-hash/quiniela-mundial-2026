@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot,
+  collection, addDoc, updateDoc, deleteDoc, setDoc, doc, onSnapshot,
   query, where, orderBy, serverTimestamp, writeBatch, getDocs
 } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -46,11 +46,11 @@ const recalcularPuntos = async (matchId, matchConResultado) => {
       if (awarded >= 3) correct++;
       if (awarded >= 5) exact++;
     }
-    await updateDoc(doc(db, 'users', userId), {
+    await setDoc(doc(db, 'users', userId), {
       totalPoints: total,
       correctResults: correct,
       exactScores: exact,
-    });
+    }, { merge: true });
   }
 };
 
@@ -323,7 +323,7 @@ const CompletedMatchRow = ({ match }) => {
           if (awarded >= 3) correct++;
           if (awarded >= 5) exact++;
         }
-        await updateDoc(doc(db, 'users', userId), { totalPoints: total, correctResults: correct, exactScores: exact });
+        await setDoc(doc(db, 'users', userId), { totalPoints: total, correctResults: correct, exactScores: exact }, { merge: true });
       }
 
       // Delete the match
