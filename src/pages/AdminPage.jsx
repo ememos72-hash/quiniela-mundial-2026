@@ -607,6 +607,130 @@ const AddFlashForm = ({ matches }) => {
   );
 };
 
+// --- Anuncio / Popup Manager ---
+const AnuncioForm = () => {
+  const [form, setForm] = useState({ active: false, title: '', body: '', imageUrl: '' });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'config', 'popup'), (snap) => {
+      if (snap.exists()) {
+        const d = snap.data();
+        setForm({ active: d.active || false, title: d.title || '', body: d.body || '', imageUrl: d.imageUrl || '' });
+      }
+      setLoaded(true);
+    });
+    return unsub;
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    setMsg('');
+    try {
+      await setDoc(doc(db, 'config', 'popup'), {
+        ...form,
+        updatedAt: serverTimestamp(),
+      });
+      setMsg('✓ Guardado');
+    } catch (e) {
+      setMsg('Error: ' + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!loaded) return <div style={{ textAlign: 'center', padding: 20 }}><div className="spinner" /></div>;
+
+  return (
+    <div>
+      <div className="admin-section">
+        <div className="admin-section-title">📢 Popup de Anuncio</div>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
+          Cuando este activo, los jugadores ven este popup al entrar a la app. Una vez cerrado no vuelve a aparecer hasta que cambies el contenido.
+        </div>
+
+        {/* Active toggle */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '14px 16px',
+          background: form.active ? 'rgba(21,128,61,0.08)' : '#f8fafc',
+          border: `2px solid ${form.active ? '#15803d' : 'var(--border)'}`,
+          borderRadius: 10, marginBottom: 16, cursor: 'pointer',
+        }} onClick={() => setForm(f => ({ ...f, active: !f.active }))}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: form.active ? '#15803d' : 'var(--text-mid)' }}>
+              {form.active ? '🟢 Popup activo' : '⚫ Popup desactivado'}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              {form.active ? 'Los jugadores lo ven al entrar' : 'Nadie lo ve ahora'}
+            </div>
+          </div>
+          <div style={{
+            width: 44, height: 24, borderRadius: 12,
+            background: form.active ? '#15803d' : '#cbd5e1',
+            position: 'relative', transition: 'background 0.2s',
+          }}>
+            <div style={{
+              position: 'absolute', top: 2,
+              left: form.active ? 22 : 2,
+              width: 20, height: 20, borderRadius: '50%',
+              background: '#fff', transition: 'left 0.2s',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            }} />
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Titulo</label>
+          <input
+            className="form-input"
+            value={form.title}
+            onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+            placeholder="Ej: Recuerda pagar tu inscripcion"
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Mensaje</label>
+          <textarea
+            className="form-input"
+            value={form.body}
+            onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
+            placeholder="Ej: Para participar en la quiniela debes pagar antes del 10 de junio."
+            rows={4}
+            style={{ resize: 'vertical', fontFamily: "'DM Sans', sans-serif" }}
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Imagen (URL, opcional)</label>
+          <input
+            className="form-input"
+            value={form.imageUrl}
+            onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
+            placeholder="https://i.imgur.com/ejemplo.jpg"
+          />
+          {form.imageUrl && (
+            <img
+              src={form.imageUrl}
+              alt="Preview"
+              style={{ marginTop: 8, width: '100%', borderRadius: 8, maxHeight: 160, objectFit: 'cover' }}
+              onError={e => { e.target.style.display = 'none'; }}
+            />
+          )}
+        </div>
+
+        {msg && <div style={{ fontSize: 12, color: 'var(--green)', marginBottom: 8, fontWeight: 500 }}>{msg}</div>}
+        <button className="primary-btn" onClick={save} disabled={saving}>
+          {saving ? 'Guardando...' : 'Guardar cambios'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // --- Main Admin Page ---
 const AdminPage = () => {
   const { isAdmin } = useAuth();
@@ -630,6 +754,7 @@ const AdminPage = () => {
     { key: 'results', label: 'Resultados' },
     { key: 'add', label: 'Agregar Partido' },
     { key: 'flash', label: 'Flash ⚡' },
+    { key: 'anuncios', label: 'Anuncios 📢' },
   ];
 
   return (
@@ -678,6 +803,7 @@ const AdminPage = () => {
 
         {tab === 'add' && <AddMatchForm />}
         {tab === 'flash' && <AddFlashForm matches={matches} />}
+        {tab === 'anuncios' && <AnuncioForm />}
       </div>
     </div>
   );

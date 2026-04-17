@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from './firebase';
 import { useAuth } from './contexts/AuthContext';
 import { LoginPage, RegisterPage } from './pages/AuthPages';
 import InicioPage from './pages/InicioPage';
@@ -9,6 +11,7 @@ import FlashPage from './pages/FlashPage';
 import RulesPage from './pages/RulesPage';
 import AdminPage from './pages/AdminPage';
 import PremioModal from './components/PremioModal';
+import AnuncioModal from './components/AnuncioModal';
 
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
@@ -21,6 +24,32 @@ const AppShell = ({ children }) => {
   const { user } = useAuth();
   const path = location.pathname;
   const [showPremio, setShowPremio] = useState(false);
+  const [popup, setPopup] = useState(null);
+  const [showPopup, setShowPopup] = useState(false);
+
+  // Listen to popup config in Firestore
+  useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(doc(db, 'config', 'popup'), (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      if (!data.active) { setShowPopup(false); return; }
+      setPopup(data);
+      // Show once per session per version (updatedAt acts as version key)
+      const key = `popup_seen_${data.updatedAt?.seconds || 'v1'}`;
+      if (!sessionStorage.getItem(key)) {
+        setShowPopup(true);
+      }
+    });
+    return unsub;
+  }, [user]);
+
+  const closePopup = () => {
+    setShowPopup(false);
+    if (popup?.updatedAt) {
+      sessionStorage.setItem(`popup_seen_${popup.updatedAt.seconds}`, '1');
+    }
+  };
 
   const tabs = [
     { path: '/inicio',   icon: '🏠', label: 'Inicio'   },
@@ -60,6 +89,7 @@ const AppShell = ({ children }) => {
             </div>
           )}
           {showPremio && <PremioModal onClose={() => setShowPremio(false)} />}
+          {showPopup && <AnuncioModal popup={popup} onClose={closePopup} />}
         </div>
         <div className="bottom-nav">
           {tabs.map(tab => (
