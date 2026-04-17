@@ -607,32 +607,117 @@ const AddFlashForm = ({ matches }) => {
   );
 };
 
+// --- Slide editor (one card per slide) ---
+const emptySlide = () => ({ title: '', body: '', imageUrl: '', linkUrl: '', linkLabel: '' });
+
+const SlideEditor = ({ slide, index, total, onChange, onDelete }) => {
+  const [open, setOpen] = useState(index === 0);
+  const upd = (field, val) => onChange({ ...slide, [field]: val });
+
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 10, marginBottom: 10, overflow: 'hidden' }}>
+      {/* Header row */}
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 14px', cursor: 'pointer',
+          background: open ? 'var(--navy)' : '#f8fafc',
+        }}
+      >
+        <span style={{ fontWeight: 600, fontSize: 13, color: open ? '#fff' : 'var(--navy)' }}>
+          Anuncio {index + 1}{slide.title ? ` — ${slide.title.slice(0, 28)}${slide.title.length > 28 ? '...' : ''}` : ''}
+        </span>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {total > 1 && (
+            <button
+              onClick={e => { e.stopPropagation(); onDelete(); }}
+              style={{ background: '#fee2e2', border: 'none', borderRadius: 20, padding: '2px 8px', cursor: 'pointer', fontSize: 13, color: '#991b1b' }}
+            >
+              🗑️
+            </button>
+          )}
+          <span style={{ fontSize: 12, color: open ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)' }}>{open ? '▲' : '▼'}</span>
+        </div>
+      </div>
+
+      {/* Fields */}
+      {open && (
+        <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Titulo</label>
+            <input className="form-input" value={slide.title} onChange={e => upd('title', e.target.value)} placeholder="Ej: Tenemos patrocinador!" />
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Mensaje</label>
+            <textarea
+              className="form-input"
+              value={slide.body}
+              onChange={e => upd('body', e.target.value)}
+              placeholder="Ej: Gracias a nuestro patrocinador todos los jugadores reciben un bonus."
+              rows={3}
+              style={{ resize: 'vertical', fontFamily: "'DM Sans', sans-serif" }}
+            />
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Imagen (URL, opcional)</label>
+            <input className="form-input" value={slide.imageUrl} onChange={e => upd('imageUrl', e.target.value)} placeholder="https://i.imgur.com/ejemplo.jpg" />
+            {slide.imageUrl && (
+              <img src={slide.imageUrl} alt="Preview"
+                style={{ marginTop: 6, width: '100%', borderRadius: 8, maxHeight: 130, objectFit: 'cover' }}
+                onError={e => { e.target.style.display = 'none'; }} />
+            )}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Link (URL, opcional)</label>
+              <input className="form-input" value={slide.linkUrl} onChange={e => upd('linkUrl', e.target.value)} placeholder="https://www.ejemplo.com" />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Texto del boton</label>
+              <input className="form-input" value={slide.linkLabel} onChange={e => upd('linkLabel', e.target.value)} placeholder="Visitar sitio" />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // --- Anuncio / Popup Manager ---
 const AnuncioForm = () => {
-  const [form, setForm] = useState({ active: false, title: '', body: '', imageUrl: '' });
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState('');
-  const [loaded, setLoaded] = useState(false);
+  const [active, setActive]   = useState(false);
+  const [slides, setSlides]   = useState([emptySlide()]);
+  const [saving, setSaving]   = useState(false);
+  const [msg, setMsg]         = useState('');
+  const [loaded, setLoaded]   = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'config', 'popup'), (snap) => {
       if (snap.exists()) {
         const d = snap.data();
-        setForm({ active: d.active || false, title: d.title || '', body: d.body || '', imageUrl: d.imageUrl || '' });
+        setActive(d.active || false);
+        // Support legacy single-slide format
+        if (d.slides?.length > 0) {
+          setSlides(d.slides);
+        } else if (d.title) {
+          setSlides([{ title: d.title || '', body: d.body || '', imageUrl: d.imageUrl || '', linkUrl: '', linkLabel: '' }]);
+        }
       }
       setLoaded(true);
     });
     return unsub;
   }, []);
 
+  const updateSlide = (i, updated) => setSlides(s => s.map((sl, idx) => idx === i ? updated : sl));
+  const deleteSlide = (i) => setSlides(s => s.filter((_, idx) => idx !== i));
+  const addSlide    = () => setSlides(s => [...s, emptySlide()]);
+
   const save = async () => {
     setSaving(true);
     setMsg('');
     try {
-      await setDoc(doc(db, 'config', 'popup'), {
-        ...form,
-        updatedAt: serverTimestamp(),
-      });
+      await setDoc(doc(db, 'config', 'popup'), { active, slides, updatedAt: serverTimestamp() });
       setMsg('✓ Guardado');
     } catch (e) {
       setMsg('Error: ' + e.message);
@@ -648,79 +733,54 @@ const AnuncioForm = () => {
       <div className="admin-section">
         <div className="admin-section-title">📢 Popup de Anuncio</div>
         <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
-          Cuando este activo, los jugadores ven este popup al entrar a la app. Una vez cerrado no vuelve a aparecer hasta que cambies el contenido.
+          Si hay varios anuncios, los jugadores pueden deslizar entre ellos. La imagen es clickable si tiene link.
         </div>
 
         {/* Active toggle */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '14px 16px',
-          background: form.active ? 'rgba(21,128,61,0.08)' : '#f8fafc',
-          border: `2px solid ${form.active ? '#15803d' : 'var(--border)'}`,
+          background: active ? 'rgba(21,128,61,0.08)' : '#f8fafc',
+          border: `2px solid ${active ? '#15803d' : 'var(--border)'}`,
           borderRadius: 10, marginBottom: 16, cursor: 'pointer',
-        }} onClick={() => setForm(f => ({ ...f, active: !f.active }))}>
+        }} onClick={() => setActive(a => !a)}>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: form.active ? '#15803d' : 'var(--text-mid)' }}>
-              {form.active ? '🟢 Popup activo' : '⚫ Popup desactivado'}
+            <div style={{ fontSize: 14, fontWeight: 600, color: active ? '#15803d' : 'var(--text-mid)' }}>
+              {active ? '🟢 Popup activo' : '⚫ Popup desactivado'}
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              {form.active ? 'Los jugadores lo ven al entrar' : 'Nadie lo ve ahora'}
+              {active ? 'Los jugadores lo ven al entrar' : 'Nadie lo ve ahora'}
             </div>
           </div>
-          <div style={{
-            width: 44, height: 24, borderRadius: 12,
-            background: form.active ? '#15803d' : '#cbd5e1',
-            position: 'relative', transition: 'background 0.2s',
-          }}>
-            <div style={{
-              position: 'absolute', top: 2,
-              left: form.active ? 22 : 2,
-              width: 20, height: 20, borderRadius: '50%',
-              background: '#fff', transition: 'left 0.2s',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-            }} />
+          <div style={{ width: 44, height: 24, borderRadius: 12, background: active ? '#15803d' : '#cbd5e1', position: 'relative', transition: 'background 0.2s' }}>
+            <div style={{ position: 'absolute', top: 2, left: active ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
           </div>
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Titulo</label>
-          <input
-            className="form-input"
-            value={form.title}
-            onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-            placeholder="Ej: Recuerda pagar tu inscripcion"
+        {/* Slides */}
+        {slides.map((sl, i) => (
+          <SlideEditor
+            key={i}
+            slide={sl}
+            index={i}
+            total={slides.length}
+            onChange={updated => updateSlide(i, updated)}
+            onDelete={() => deleteSlide(i)}
           />
-        </div>
+        ))}
 
-        <div className="form-group">
-          <label className="form-label">Mensaje</label>
-          <textarea
-            className="form-input"
-            value={form.body}
-            onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
-            placeholder="Ej: Para participar en la quiniela debes pagar antes del 10 de junio."
-            rows={4}
-            style={{ resize: 'vertical', fontFamily: "'DM Sans', sans-serif" }}
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Imagen (URL, opcional)</label>
-          <input
-            className="form-input"
-            value={form.imageUrl}
-            onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
-            placeholder="https://i.imgur.com/ejemplo.jpg"
-          />
-          {form.imageUrl && (
-            <img
-              src={form.imageUrl}
-              alt="Preview"
-              style={{ marginTop: 8, width: '100%', borderRadius: 8, maxHeight: 160, objectFit: 'cover' }}
-              onError={e => { e.target.style.display = 'none'; }}
-            />
-          )}
-        </div>
+        <button
+          onClick={addSlide}
+          style={{
+            width: '100%', padding: '9px 0', marginBottom: 14,
+            border: '2px dashed var(--border)', borderRadius: 10,
+            background: 'transparent', color: 'var(--text-mid)',
+            fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          + Agregar otro anuncio
+        </button>
 
         {msg && <div style={{ fontSize: 12, color: 'var(--green)', marginBottom: 8, fontWeight: 500 }}>{msg}</div>}
         <button className="primary-btn" onClick={save} disabled={saving}>
