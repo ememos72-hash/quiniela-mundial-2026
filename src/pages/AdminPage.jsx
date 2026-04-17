@@ -388,52 +388,221 @@ const CompletedMatchRow = ({ match }) => {
   );
 };
 
-// --- Add Flash Form ---
-const AddFlashForm = () => {
+// --- Flash Manager (list + create) ---
+const AddFlashForm = ({ matches }) => {
+  const [flashes, setFlashes] = useState([]);
   const [form, setForm] = useState({ name: '', startDate: '', endDate: '', description: '' });
+  const [mode, setMode] = useState('dateRange'); // 'dateRange' | 'matches'
+  const [selectedIds, setSelectedIds] = useState(new Set());
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
+  useEffect(() => {
+    const q = query(collection(db, 'flashes'), orderBy('startDate', 'desc'));
+    return onSnapshot(q, snap => setFlashes(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+  }, []);
+
+  const toggleMatch = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
   const save = async () => {
-    if (!form.name || !form.startDate || !form.endDate) return;
+    if (!form.name) return;
+    if (mode === 'dateRange' && (!form.startDate || !form.endDate)) return;
+    if (mode === 'matches' && selectedIds.size === 0) return;
     setSaving(true);
     try {
-      await addDoc(collection(db, 'flashes'), {
-        ...form,
-        createdAt: serverTimestamp(),
-      });
+      let data = { name: form.name, description: form.description, mode, createdAt: serverTimestamp() };
+      if (mode === 'dateRange') {
+        data.startDate = form.startDate;
+        data.endDate   = form.endDate;
+        data.matchIds  = [];
+      } else {
+        // Auto-compute startDate / endDate from selected matches for display purposes
+        const sel = matches.filter(m => selectedIds.has(m.id));
+        const dates = sel.map(m => m.date).sort();
+        data.startDate = dates[0];
+        data.endDate   = dates[dates.length - 1];
+        data.matchIds  = [...selectedIds];
+      }
+      await addDoc(collection(db, 'flashes'), data);
       setForm({ name: '', startDate: '', endDate: '', description: '' });
+      setSelectedIds(new Set());
       setMsg('✓ Quiniela flash creada');
     } finally {
       setSaving(false);
     }
   };
 
+  const deleteFlash = async (f) => {
+    if (!window.confirm(`¿Eliminar "${f.name}"?`)) return;
+    await deleteDoc(doc(db, 'flashes', f.id));
+  };
+
+  const fmtDate = (s) => {
+    try { return s.slice(0, 10); } catch { return s; }
+  };
+
+  // Group matches by date for the picker
+  const matchesByDate = matches.reduce((acc, m) => {
+    const day = m.date ? m.date.slice(0, 10) : 'Sin fecha';
+    if (!acc[day]) acc[day] = [];
+    acc[day].push(m);
+    return acc;
+  }, {});
+
+  const canSave = form.name &&
+    (mode === 'dateRange' ? (form.startDate && form.endDate) : selectedIds.size > 0);
+
   return (
-    <div className="admin-section">
-      <div className="admin-section-title">⚡ Nueva Quiniela Flash</div>
-      <div className="form-group">
-        <label className="form-label">Nombre</label>
-        <input className="form-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ej: Flash Jornada 2" />
-      </div>
-      <div className="form-group">
-        <label className="form-label">Descripción (opcional)</label>
-        <input className="form-input" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Ej: Los 6 partidos del día..." />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+    <div>
+      {/* Existing flashes */}
+      {flashes.length > 0 && (
+        <div className="admin-section" style={{ marginBottom: 16 }}>
+          <div className="admin-section-title">⚡ Quinielas Flash existentes</div>
+          {flashes.map(f => (
+            <div key={f.id} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '8px 0', borderBottom: '1px solid var(--border)',
+            }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--navy)' }}>{f.name}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  {f.mode === 'matches'
+                    ? `${f.matchIds?.length || 0} partidos seleccionados`
+                    : `${fmtDate(f.startDate)} — ${fmtDate(f.endDate)}`}
+                </div>
+              </div>
+              <button
+                onClick={() => deleteFlash(f)}
+                style={{ fontSize: 14, padding: '2px 8px', borderRadius: 20, cursor: 'pointer', border: 'none', background: '#fee2e2', color: '#991b1b' }}
+                title="Eliminar flash"
+              >
+                🗑️
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Create new */}
+      <div className="admin-section">
+        <div className="admin-section-title">➕ Nueva Quiniela Flash</div>
+
         <div className="form-group">
-          <label className="form-label">Fecha inicio</label>
-          <input className="form-input" type="datetime-local" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
+          <label className="form-label">Nombre</label>
+          <input className="form-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ej: Flash Cuartos de Final" />
         </div>
         <div className="form-group">
-          <label className="form-label">Fecha fin</label>
-          <input className="form-input" type="datetime-local" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} />
+          <label className="form-label">Descripcion (opcional)</label>
+          <input className="form-input" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Ej: Partidos del 11 al 27 de junio" />
         </div>
+
+        {/* Mode toggle */}
+        <div className="form-group">
+          <label className="form-label">Tipo de flash</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[
+              { key: 'dateRange', label: '📅 Por fechas' },
+              { key: 'matches',   label: '⚽ Partidos específicos' },
+            ].map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => setMode(opt.key)}
+                style={{
+                  flex: 1, padding: '8px 0', borderRadius: 8, cursor: 'pointer',
+                  border: `2px solid ${mode === opt.key ? 'var(--navy)' : 'var(--border)'}`,
+                  background: mode === opt.key ? 'var(--navy)' : '#f8fafc',
+                  color: mode === opt.key ? '#fff' : 'var(--text-mid)',
+                  fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600,
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Date range fields */}
+        {mode === 'dateRange' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className="form-group">
+              <label className="form-label">Fecha inicio</label>
+              <input className="form-input" type="datetime-local" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Fecha fin</label>
+              <input className="form-input" type="datetime-local" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} />
+            </div>
+          </div>
+        )}
+
+        {/* Match picker */}
+        {mode === 'matches' && (
+          <div className="form-group">
+            <label className="form-label">
+              Seleccionar partidos
+              {selectedIds.size > 0 && (
+                <span style={{ marginLeft: 8, color: 'var(--navy)', fontWeight: 600 }}>
+                  ({selectedIds.size} seleccionados)
+                </span>
+              )}
+            </label>
+            {matches.length === 0 ? (
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', padding: '8px 0' }}>
+                No hay partidos cargados aun.
+              </div>
+            ) : (
+              <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', maxHeight: 320, overflowY: 'auto' }}>
+                {Object.entries(matchesByDate).map(([day, dayMatches]) => (
+                  <div key={day}>
+                    <div style={{
+                      padding: '6px 12px', background: '#f1f5f9',
+                      fontSize: 11, fontWeight: 700, color: 'var(--text-mid)',
+                      textTransform: 'uppercase', letterSpacing: '0.06em',
+                      position: 'sticky', top: 0,
+                    }}>
+                      {day}
+                    </div>
+                    {dayMatches.map(m => (
+                      <label key={m.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '9px 12px', cursor: 'pointer',
+                        borderBottom: '1px solid var(--border)',
+                        background: selectedIds.has(m.id) ? '#eff6ff' : '#fff',
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(m.id)}
+                          onChange={() => toggleMatch(m.id)}
+                          style={{ accentColor: 'var(--navy)', width: 16, height: 16, flexShrink: 0 }}
+                        />
+                        <span style={{ fontSize: 13, color: 'var(--navy)', fontWeight: selectedIds.has(m.id) ? 600 : 400 }}>
+                          {m.teamA} vs {m.teamB}
+                        </span>
+                        {m.result && (
+                          <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)' }}>
+                            {m.result.teamAScore}-{m.result.teamBScore}
+                          </span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {msg && <div style={{ fontSize: 12, color: 'var(--green)', marginBottom: 8, fontWeight: 500 }}>{msg}</div>}
+        <button className="primary-btn" onClick={save} disabled={saving || !canSave}>
+          {saving ? 'Creando...' : 'Crear Quiniela Flash'}
+        </button>
       </div>
-      {msg && <div style={{ fontSize: 12, color: 'var(--green)', marginBottom: 8, fontWeight: 500 }}>{msg}</div>}
-      <button className="primary-btn" onClick={save} disabled={saving || !form.name || !form.startDate || !form.endDate}>
-        {saving ? 'Creando...' : 'Crear Quiniela Flash'}
-      </button>
     </div>
   );
 };
@@ -508,7 +677,7 @@ const AdminPage = () => {
         )}
 
         {tab === 'add' && <AddMatchForm />}
-        {tab === 'flash' && <AddFlashForm />}
+        {tab === 'flash' && <AddFlashForm matches={matches} />}
       </div>
     </div>
   );

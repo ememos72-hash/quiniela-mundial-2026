@@ -1,45 +1,44 @@
 // =============================================================================
-//  PREMIACIÓN — Edita los datos aquí en VS Code y haz git push para publicar.
+//  PREMIACION - Edita los datos aqui en VS Code y haz git push para publicar.
 // =============================================================================
 
-// SECCIÓN 1: RESUMEN DE LA QUINIELA
+// SECCION 1: RESUMEN DE LA QUINIELA
 // Actualiza los montos conforme se confirmen los jugadores y el costo de entrada.
-// Deja el campo en '' para que aparezca como '—' en la pantalla.
+// Deja el campo en '' para que aparezca como '-' en la pantalla.
 const RESUMEN = {
   jugadores:    '',   // Ej: '30 participantes'
-  costoEntrada: '',   // Ej: '₡20.000'
-  bolsaBruta:   '',   // Ej: '₡600.000'
-  gastosAdmin:  '',   // Ej: '₡72.000'
-  bolsaNeta:    '',   // Ej: '₡528.000'
+  costoEntrada: '₡25.000',   // Ej: 'c25.000'
+  bolsaBruta:   '',   // Ej: 'c600.000'
+  gastosAdmin:  '',   // Ej: 'c72.000'
+  bolsaNeta:    '',   // Ej: 'c528.000'
 };
 
-// SECCIÓN 2: DISTRIBUCIÓN DE PREMIOS
+// SECCION 2: DISTRIBUCION DE PREMIOS
 // Actualiza los montos en la columna 'monto'. El porcentaje es informativo.
 const PREMIOS = [
-  { emoji: '🥇', lugar: '1.º Lugar', porcentaje: '60%', monto: '' },
-  { emoji: '🥈', lugar: '2.º Lugar', porcentaje: '30%', monto: '' },
-  { emoji: '🥉', lugar: '3.º Lugar', porcentaje: '10%', monto: '' },
+  { emoji: '🥇', lugar: '1. Lugar', porcentaje: '40%', monto: '' },
+  { emoji: '🥈', lugar: '2. Lugar', porcentaje: '25%', monto: '' },
+  { emoji: '🥉', lugar: '3. Lugar', porcentaje: '15%', monto: '' },
 ];
 
-// SECCIÓN 3: TRANSFERENCIAS BANCARIAS
-// Agrega o elimina bancos según sea necesario.
+// SECCION 3: TRANSFERENCIAS BANCARIAS
 const TRANSFERENCIAS = [
   { banco: 'BCR', titular: 'Emerson Monge',  iban: 'CR29015202001091097579' },
   { banco: 'BAC', titular: 'Nicole Eduarte', iban: 'CR49010200009419357106' },
   { banco: 'BN',  titular: 'Nicole Eduarte', iban: 'CR93015118820010097181' },
 ];
 
-// SECCIÓN 4: SINPE MÓVIL
+// SECCION 4: SINPE MOVIL
 const SINPE = {
   titular: 'Emerson Monge',
   numero:  '83871924',
 };
 
 // =============================================================================
-//  FIN DE LA SECCIÓN EDITABLE
+//  FIN DE LA SECCION EDITABLE
 // =============================================================================
 
-const val = (v) => v || '—';
+const val = (v) => v || '-';
 
 const Row = ({ label, value, highlight }) => (
   <div style={{
@@ -69,7 +68,6 @@ const PremioModal = ({ onClose }) => {
         backdropFilter: 'blur(2px)',
       }}
     >
-      {/* Sheet — stops click propagation so tapping inside no cierra */}
       <div
         onClick={e => e.stopPropagation()}
         style={{
@@ -95,7 +93,7 @@ const PremioModal = ({ onClose }) => {
             fontFamily: "'Bebas Neue', sans-serif",
             fontSize: 26, letterSpacing: '0.04em', color: 'var(--navy)',
           }}>
-            Premiación
+            Premiacion
           </div>
           <button
             onClick={onClose}
@@ -106,13 +104,13 @@ const PremioModal = ({ onClose }) => {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
-            ✕
+            x
           </button>
         </div>
 
         <div style={{ padding: '0 20px' }}>
 
-          {/* ── Resumen ── */}
+          {/* Resumen */}
           <div style={{
             fontFamily: "'Bebas Neue', sans-serif",
             fontSize: 18, letterSpacing: '0.04em',
@@ -121,22 +119,32 @@ const PremioModal = ({ onClose }) => {
             Resumen de La Quiniela
           </div>
 
-          <div style={{ marginBottom: 20 }}>
-            <Row label="Jugadores"             value={val(RESUMEN.jugadores)} />
-            <Row label="Costo de entrada"      value={val(RESUMEN.costoEntrada)} />
-            <Row label="Bolsa total bruta"     value={val(RESUMEN.bolsaBruta)} />
+          <div style={{ marginBottom: 8 }}>
+            <Row label="Jugadores"              value={val(RESUMEN.jugadores)} />
+            <Row label="Costo de entrada"       value={val(RESUMEN.costoEntrada)} />
+            <Row label="Bolsa total bruta"      value={val(RESUMEN.bolsaBruta)} />
             <Row label="Gastos administrativos (12%)" value={val(RESUMEN.gastosAdmin)} />
-            <Row label="Bolsa neta a premiar"  value={val(RESUMEN.bolsaNeta)} highlight />
+            <Row label="Bolsa neta a premiar"   value={val(RESUMEN.bolsaNeta)} highlight />
           </div>
 
           <div style={{
-            fontSize: 11, color: '#94a3b8', marginTop: -12, marginBottom: 20,
-            fontStyle: 'italic',
+            fontSize: 11, color: '#94a3b8', marginBottom: 8, fontStyle: 'italic',
           }}>
             * Un 12% de la bolsa se destinará a gastos de mantenimiento y administración.
           </div>
 
-          {/* ── Premios ── */}
+          <div style={{
+            fontSize: 12, color: '#475569',
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: 8,
+            padding: '8px 12px',
+            marginBottom: 20,
+          }}>
+            Se premiarán múltiples posiciones de la tabla general (aprox. Top 5-7 segun participación).
+          </div>
+
+          {/* Premios */}
           <div style={{
             fontFamily: "'Bebas Neue', sans-serif",
             fontSize: 18, letterSpacing: '0.04em',
@@ -170,7 +178,7 @@ const PremioModal = ({ onClose }) => {
             </div>
           ))}
 
-          {/* ── Formas de Pago ── */}
+          {/* Formas de Pago */}
           <div style={{
             fontFamily: "'Bebas Neue', sans-serif",
             fontSize: 18, letterSpacing: '0.04em',
@@ -179,7 +187,6 @@ const PremioModal = ({ onClose }) => {
             Formas de Pago
           </div>
 
-          {/* Transferencias */}
           <div style={{
             fontSize: 13, fontWeight: 600, color: '#475569',
             marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em',
@@ -195,7 +202,7 @@ const PremioModal = ({ onClose }) => {
               marginBottom: 8,
             }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginBottom: 2 }}>
-                {t.banco} · {t.titular}
+                {t.banco} - {t.titular}
               </div>
               <div style={{
                 fontSize: 13, color: '#2563eb',
@@ -206,13 +213,12 @@ const PremioModal = ({ onClose }) => {
             </div>
           ))}
 
-          {/* SINPE */}
           <div style={{
             fontSize: 13, fontWeight: 600, color: '#475569',
             marginTop: 14, marginBottom: 8,
             textTransform: 'uppercase', letterSpacing: '0.06em',
           }}>
-            Sinpe Móvil
+            Sinpe Movil
           </div>
 
           <div style={{
