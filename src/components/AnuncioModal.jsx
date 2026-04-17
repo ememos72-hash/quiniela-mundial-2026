@@ -53,20 +53,20 @@ const AnuncioModal = ({ popup, onClose }) => {
       >
         {/* Image (clickable if linkUrl set) */}
         {slide.imageUrl && (
-          <div style={{ width: '100%', maxHeight: 220, overflow: 'hidden' }}>
+          <div style={{ width: '100%', background: '#000' }}>
             {slide.linkUrl ? (
               <a href={slide.linkUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
                 <img
                   src={slide.imageUrl}
                   alt="Anuncio"
-                  style={{ width: '100%', objectFit: 'cover', display: 'block', cursor: 'pointer' }}
+                  style={{ width: '100%', height: 'auto', display: 'block', cursor: 'pointer' }}
                 />
               </a>
             ) : (
               <img
                 src={slide.imageUrl}
                 alt="Anuncio"
-                style={{ width: '100%', objectFit: 'cover', display: 'block' }}
+                style={{ width: '100%', height: 'auto', display: 'block' }}
               />
             )}
           </div>
