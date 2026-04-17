@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+
 // =============================================================================
 //  PÁGINA DE INICIO — La Quiniela · Mundial 2026
 //  Edita el contenido directamente aquí en VS Code y haz git push para publicar.
@@ -36,7 +38,7 @@ const ANUNCIOS = [
     contenido:
       'Ya puedes registrar tus predicciones para todos los partidos de la fase de grupos. ' +
       'Recuerda que los partidos se cierran cuando inician, ¡no te quedes sin predecir! Tendremos premios semanales para los líderes de cada jornada y un gran premio final para el campeón de la quiniela.',
-    imagen: 'https://i.postimg.cc/28VBnfD7/2026-04-16-21.png',
+    imagen: 'https://i.postimg.cc/SKkNxPbM/Whats-App-Image-2026-04-17-at-2-42-43-PM.jpg',
     fecha: '16 Abr 2026',
   },
   // --- Agrega más anuncios aquí arriba (copia el bloque de arriba) ---
@@ -44,22 +46,87 @@ const ANUNCIOS = [
      tipo: 'premio',
      titulo: '🎁 Sorpresa para el líder de la semana',
      contenido: 'El jugador con más puntos al final de la Jornada 2 recibirá un premio especial.',
-     imagen: 'https://i.postimg.cc/768NWZqj/2026-04-16-21-48-40.png',
+ //  imagen: 'https://i.postimg.cc/768NWZqj/2026-04-16-21-48-40.png',
      fecha: '18 Jun 2026',
   },
-  {
-    tipo: 'resultado',
-    titulo: '⚽ Jornada 1 — Resumen',
-   contenido: 'México 2-0 Sudáfrica\nCanadá 1-1 Catar\n¡Gran inicio del torneo!',
-   imagen: 'https://i.postimg.cc/QtJcYg4Y/2026-04-16-21-48-40.png',
-   fecha: '22 Jun 2026',
- },
+//{
+//tipo: 'resultado',
+//   titulo: '⚽ Jornada 1 — Resumen',
+// contenido: 'México 2-0 Sudáfrica\nCanadá 1-1 Catar\n¡Gran inicio del torneo!',
+//  imagen: 'https://i.postimg.cc/QtJcYg4Y/2026-04-16-21-48-40.png',
+// fecha: '22 Jun 2026',
+//},
 ];
 
 // =============================================================================
 //  FIN DE LA SECCIÓN EDITABLE
 //  No modifiques el código debajo de esta línea a menos que sepas lo que haces.
 // =============================================================================
+
+const MUNDIAL_START = new Date('2026-06-11T16:00:00-05:00'); // Inauguración 11 jun, 4pm hora CR
+
+const useCountdown = (target) => {
+  const calc = () => {
+    const diff = target - new Date();
+    if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, started: true };
+    return {
+      days:    Math.floor(diff / 86400000),
+      hours:   Math.floor((diff % 86400000) / 3600000),
+      minutes: Math.floor((diff % 3600000)  / 60000),
+      seconds: Math.floor((diff % 60000)    / 1000),
+      started: false,
+    };
+  };
+  const [time, setTime] = useState(calc);
+  useEffect(() => {
+    const id = setInterval(() => setTime(calc()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return time;
+};
+
+// ── Countdown compacto (va dentro del hero) ──────────────────────────────────
+// Para quitar el countdown cuando empiece el mundial, elimina <CountdownCompact />
+// del hero de bienvenida y este componente completo.
+const CountdownCompact = () => {
+  const { days, hours, minutes, seconds, started } = useCountdown(MUNDIAL_START);
+  if (started) return null;
+
+  const num = (v) => (
+    <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: 'var(--gold-light)', letterSpacing: '0.02em' }}>
+      {String(v).padStart(2, '0')}
+    </span>
+  );
+  const lbl = (t) => (
+    <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+      {t}
+    </span>
+  );
+  const sep = (
+    <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: 'rgba(255,255,255,0.25)', margin: '0 2px' }}>:</span>
+  );
+
+  return (
+    <div style={{
+      marginTop: 14,
+      paddingTop: 12,
+      borderTop: '1px solid rgba(255,255,255,0.1)',
+    }}>
+      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>
+        ⏱ Faltan para el Mundial
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>{num(days)}{lbl('días')}</div>
+        {sep}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>{num(hours)}{lbl('horas')}</div>
+        {sep}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>{num(minutes)}{lbl('min')}</div>
+        {sep}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>{num(seconds)}{lbl('seg')}</div>
+      </div>
+    </div>
+  );
+};
 
 const TIPO_CONFIG = {
   noticia:   { label: 'Noticia',           icon: '📢', color: '#0369a1', bg: '#e0f2fe' },
@@ -106,6 +173,10 @@ const InicioPage = () => {
         }}>
           {BIENVENIDA.texto}
         </div>
+
+        {/* ── Countdown dentro del hero — quitar cuando empiece el mundial ── */}
+        <CountdownCompact />
+
       </div>
 
       {/* ── Anuncios ── */}
