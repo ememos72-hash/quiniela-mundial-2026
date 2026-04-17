@@ -51,11 +51,15 @@ const MatchCard = ({ match, userId }) => {
     if (!localPred || saving) return;
     setSaving(true);
     try {
+      const isUpdate = !!prediction;
+      const now = new Date().toISOString();
       const data = {
         userId,
         matchId: match.id,
         result: localPred,
-        savedAt: new Date().toISOString(),
+        savedAt: prediction?.savedAt || now,
+        updatedAt: now,
+        changeCount: isUpdate ? (prediction.changeCount || 0) + 1 : 0,
       };
       if (allowExactScore && scoreA !== '' && scoreB !== '') {
         data.teamAScore = parseInt(scoreA);
@@ -79,6 +83,11 @@ const MatchCard = ({ match, userId }) => {
     ? format(parseISO(match.date), "d 'de' MMM · HH:mm", { locale: es })
     : '';
 
+  const predTimestamp = prediction?.updatedAt
+    ? format(new Date(prediction.updatedAt), "d MMM · HH:mm", { locale: es })
+    : null;
+  const wasChanged = prediction?.changeCount > 0;
+
   return (
     <div className="match-card">
       <div className="match-meta">
@@ -86,6 +95,11 @@ const MatchCard = ({ match, userId }) => {
           {match.group && <span className="match-group-badge">Grupo {match.group}</span>}
           <span>{PHASE_LABELS[match.phase] || match.phase}</span>
           {dateStr && <span> · {dateStr}</span>}
+          {match.venue && (
+            <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+              📍 {match.venue}
+            </span>
+          )}
         </div>
         {match.result
           ? <span className="badge-played">Finalizado</span>
@@ -171,6 +185,24 @@ const MatchCard = ({ match, userId }) => {
           >
             {saved ? '✓ Guardado' : saving ? 'Guardando...' : prediction ? 'Actualizar predicción' : 'Guardar predicción'}
           </button>
+
+          {predTimestamp && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              marginTop: 8, padding: '5px 10px',
+              background: wasChanged ? '#fef3c7' : '#f0fdf4',
+              borderRadius: 20, alignSelf: 'flex-start',
+              border: `1px solid ${wasChanged ? '#fcd34d' : '#86efac'}`,
+            }}>
+              <span style={{ fontSize: 12 }}>{wasChanged ? '🔄' : '✅'}</span>
+              <span style={{
+                fontSize: 11, fontWeight: 500,
+                color: wasChanged ? '#92400e' : '#15803d',
+              }}>
+                {wasChanged ? `Cambiaste tu predicción · ${predTimestamp}` : `Guardado · ${predTimestamp}`}
+              </span>
+            </div>
+          )}
         </>
       )}
 
@@ -181,7 +213,14 @@ const MatchCard = ({ match, userId }) => {
             Tu predicción: {prediction.result === 'teamA' ? match.teamA : prediction.result === 'teamB' ? match.teamB : 'Empate'}
             {prediction.teamAScore !== undefined && ` · ${prediction.teamAScore}-${prediction.teamBScore}`}
           </span>
-          <span>Esperando resultado</span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+            <span>Esperando resultado</span>
+            {predTimestamp && (
+              <span style={{ fontSize: 10, color: wasChanged ? '#92400e' : '#6b7280', fontWeight: 500 }}>
+                {wasChanged ? `🔄 Cambiado · ${predTimestamp}` : `✅ ${predTimestamp}`}
+              </span>
+            )}
+          </div>
         </div>
       )}
 

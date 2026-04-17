@@ -5,6 +5,7 @@ import MatchesPage from './pages/MatchesPage';
 import RankingPage from './pages/RankingPage';
 import FlashPage from './pages/FlashPage';
 import RulesPage from './pages/RulesPage';
+import TableroPage from './pages/TableroPage';
 import AdminPage from './pages/AdminPage';
 
 const ProtectedRoute = ({ children }) => {
@@ -22,7 +23,7 @@ const AppShell = ({ children }) => {
     { path: '/', icon: '⚽', label: 'Partidos' },
     { path: '/ranking', icon: '🏆', label: 'Ranking' },
     { path: '/flash', icon: '⚡', label: 'Flash' },
-    { path: '/info', icon: '📋', label: 'Info' },
+    { path: '/info', icon: '📋', label: 'Tablero' },
   ];
 
   return (
@@ -74,7 +75,7 @@ function App() {
               <Route path="/" element={<MatchesPage />} />
               <Route path="/ranking" element={<RankingPage />} />
               <Route path="/flash" element={<FlashPage />} />
-              <Route path="/info" element={<RulesPage />} />
+              <Route path="/info" element={<TableroPage />} />
             </Routes>
           </AppShell>
         </ProtectedRoute>
