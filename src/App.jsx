@@ -24,32 +24,20 @@ const AppShell = ({ children }) => {
   const { user } = useAuth();
   const path = location.pathname;
   const [showPremio, setShowPremio] = useState(false);
-  const [popup, setPopup] = useState(null);
-  const [showPopup, setShowPopup] = useState(false);
+  const [popup, setPopup]       = useState(null);
+  const [dismissed, setDismissed] = useState(false);
 
   // Listen to popup config in Firestore
   useEffect(() => {
     if (!user) return;
-    const unsub = onSnapshot(doc(db, 'config', 'popup'), (snap) => {
-      if (!snap.exists()) return;
-      const data = snap.data();
-      if (!data.active) { setShowPopup(false); return; }
-      setPopup(data);
-      // Show once per session per version (updatedAt acts as version key)
-      const key = `popup_seen_${data.updatedAt?.seconds || 'v1'}`;
-      if (!sessionStorage.getItem(key)) {
-        setShowPopup(true);
-      }
+    return onSnapshot(doc(db, 'config', 'popup'), (snap) => {
+      setPopup(snap.exists() ? snap.data() : null);
     });
-    return unsub;
   }, [user]);
 
-  const closePopup = () => {
-    setShowPopup(false);
-    if (popup?.updatedAt) {
-      sessionStorage.setItem(`popup_seen_${popup.updatedAt.seconds}`, '1');
-    }
-  };
+  // popup visible when active and not dismissed by user this session
+  const showPopup = !!(popup?.active && !dismissed);
+  const closePopup = () => setDismissed(true);
 
   const tabs = [
     { path: '/inicio',   icon: '🏠', label: 'Inicio'   },
