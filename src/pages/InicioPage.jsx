@@ -36,7 +36,7 @@ const ANUNCIOS = [
     contenido:
       'Ya puedes registrar tus predicciones para todos los partidos de la fase de grupos. ' +
       'Recuerda que los partidos se cierran cuando inician, ¡no te quedes sin predecir! Tendremos premios semanales para los líderes de cada jornada y un gran premio final para el campeón de la quiniela.',
-    imagen: '',
+    imagen: 'https://i.postimg.cc/28VBnfD7/2026-04-16-21.png',
     fecha: '16 Abr 2026',
   },
   // --- Agrega más anuncios aquí arriba (copia el bloque de arriba) ---
@@ -44,14 +44,14 @@ const ANUNCIOS = [
      tipo: 'premio',
      titulo: '🎁 Sorpresa para el líder de la semana',
      contenido: 'El jugador con más puntos al final de la Jornada 2 recibirá un premio especial.',
-     imagen: 'https://digitalhub.fifa.com/transform/8e91b65e-cf13-45a9-a9dd-ea407564271a/GettyImages-793050011?focuspoint=0.58,0.42&io=transform:fill,aspectratio:4x3,width:960&quality=75',
+     imagen: 'https://i.postimg.cc/768NWZqj/2026-04-16-21-48-40.png',
      fecha: '18 Jun 2026',
   },
   {
     tipo: 'resultado',
     titulo: '⚽ Jornada 1 — Resumen',
    contenido: 'México 2-0 Sudáfrica\nCanadá 1-1 Catar\n¡Gran inicio del torneo!',
-   imagen: 'https://i.postimg.cc/y8p9wYyr/2026-FIFA-World-Cup-emblem-svg.png',
+   imagen: 'https://i.postimg.cc/QtJcYg4Y/2026-04-16-21-48-40.png',
    fecha: '22 Jun 2026',
  },
 ];

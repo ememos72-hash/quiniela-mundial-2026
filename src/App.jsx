@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { LoginPage, RegisterPage } from './pages/AuthPages';
@@ -7,6 +8,7 @@ import RankingPage from './pages/RankingPage';
 import FlashPage from './pages/FlashPage';
 import RulesPage from './pages/RulesPage';
 import AdminPage from './pages/AdminPage';
+import PremioModal from './components/PremioModal';
 
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
@@ -18,6 +20,7 @@ const AppShell = ({ children }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const path = location.pathname;
+  const [showPremio, setShowPremio] = useState(false);
 
   const tabs = [
     { path: '/inicio',   icon: '🏠', label: 'Inicio'   },
@@ -37,11 +40,26 @@ const AppShell = ({ children }) => {
           </div>
           {user && (
             <div className="header-user">
-              <div className="header-avatar" onClick={() => navigate('/info')}>
-                {user.displayName?.charAt(0)?.toUpperCase() || '?'}
-              </div>
+              <button
+                onClick={() => setShowPremio(true)}
+                style={{
+                  background: 'var(--gold)',
+                  color: 'var(--navy)',
+                  border: 'none',
+                  borderRadius: 20,
+                  padding: '5px 12px',
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                🏆 Ver Premiación
+              </button>
             </div>
           )}
+          {showPremio && <PremioModal onClose={() => setShowPremio(false)} />}
         </div>
         <div className="bottom-nav">
           {tabs.map(tab => (
