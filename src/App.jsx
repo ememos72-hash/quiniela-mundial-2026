@@ -1,11 +1,11 @@
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { LoginPage, RegisterPage } from './pages/AuthPages';
+import InicioPage from './pages/InicioPage';
 import MatchesPage from './pages/MatchesPage';
 import RankingPage from './pages/RankingPage';
 import FlashPage from './pages/FlashPage';
 import RulesPage from './pages/RulesPage';
-import TableroPage from './pages/TableroPage';
 import AdminPage from './pages/AdminPage';
 
 const ProtectedRoute = ({ children }) => {
@@ -20,10 +20,11 @@ const AppShell = ({ children }) => {
   const path = location.pathname;
 
   const tabs = [
-    { path: '/', icon: '⚽', label: 'Partidos' },
-    { path: '/ranking', icon: '🏆', label: 'Ranking' },
-    { path: '/flash', icon: '⚡', label: 'Flash' },
-    { path: '/info', icon: '📋', label: 'Tablero' },
+    { path: '/inicio',   icon: '🏠', label: 'Inicio'   },
+    { path: '/partidos', icon: '⚽', label: 'Partidos' },
+    { path: '/ranking',  icon: '🏆', label: 'Ranking'  },
+    { path: '/flash',    icon: '⚡', label: 'Flash'    },
+    { path: '/info',     icon: '📋', label: 'Info'     },
   ];
 
   return (
@@ -65,17 +66,19 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
-      <Route path="/register" element={user ? <Navigate to="/" replace /> : <RegisterPage />} />
-      <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+      <Route path="/login"    element={user ? <Navigate to="/inicio" replace /> : <LoginPage />} />
+      <Route path="/register" element={user ? <Navigate to="/inicio" replace /> : <RegisterPage />} />
+      <Route path="/admin"    element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
       <Route path="/*" element={
         <ProtectedRoute>
           <AppShell>
             <Routes>
-              <Route path="/" element={<MatchesPage />} />
-              <Route path="/ranking" element={<RankingPage />} />
-              <Route path="/flash" element={<FlashPage />} />
-              <Route path="/info" element={<TableroPage />} />
+              <Route path="/"          element={<Navigate to="/inicio" replace />} />
+              <Route path="/inicio"    element={<InicioPage />} />
+              <Route path="/partidos"  element={<MatchesPage />} />
+              <Route path="/ranking"   element={<RankingPage />} />
+              <Route path="/flash"     element={<FlashPage />} />
+              <Route path="/info"      element={<RulesPage />} />
             </Routes>
           </AppShell>
         </ProtectedRoute>

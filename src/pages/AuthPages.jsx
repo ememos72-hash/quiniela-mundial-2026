@@ -20,7 +20,7 @@ export const LoginPage = () => {
     setLoading(true);
     try {
       await login(email, password);
-      navigate('/');
+      navigate('/inicio');
     } catch {
       setError('Correo o contraseña incorrectos');
     } finally {
@@ -144,7 +144,7 @@ export const RegisterPage = () => {
     setLoading(true);
     try {
       await register(email, password, name);
-      navigate('/');
+      navigate('/inicio');
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') setError('Este correo ya está registrado');
       else setError('Error al crear la cuenta. Intenta de nuevo.');

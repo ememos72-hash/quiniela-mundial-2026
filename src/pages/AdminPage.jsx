@@ -446,7 +446,7 @@ const AdminPage = () => {
   const [tab, setTab] = useState('results');
 
   useEffect(() => {
-    if (!isAdmin) navigate('/');
+    if (!isAdmin) navigate('/inicio');
   }, [isAdmin]);
 
   useEffect(() => {
@@ -467,7 +467,7 @@ const AdminPage = () => {
     <div style={{ maxWidth: 480, margin: '0 auto', minHeight: '100vh', background: 'var(--surface)' }}>
       <div style={{ background: 'var(--navy)', padding: '16px 16px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-          <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: 20 }}>←</button>
+          <button onClick={() => navigate('/inicio')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: 20 }}>←</button>
           <div>
             <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 24, color: '#fff', letterSpacing: '0.04em' }}>Panel Admin</div>
             <div style={{ fontSize: 11, color: 'var(--gold-light)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>La Quiniela · Mundial 2026</div>
