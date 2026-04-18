@@ -1,13 +1,22 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { getInitials } from '../utils/points';
 
 const RankingPage = () => {
-  const { user } = useAuth();
-  const [players, setPlayers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { user, isAdmin } = useAuth();
+  const [players, setPlayers]         = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [rankingVisible, setRankingVisible] = useState(true);
+
+  // Escuchar visibilidad del ranking en tiempo real
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'config', 'settings'), (snap) => {
+      setRankingVisible(snap.exists() ? snap.data().rankingVisible !== false : true);
+    });
+    return unsub;
+  }, []);
 
   useEffect(() => {
     const q = query(
@@ -43,6 +52,21 @@ const RankingPage = () => {
     if (i === 2) return '🥉';
     return null;
   };
+
+  // Jugadores normales ven pantalla de espera si el ranking está oculto
+  if (!isAdmin && !rankingVisible) {
+    return (
+      <div className="page" style={{ textAlign: 'center', paddingTop: 48 }}>
+        <div style={{ fontSize: 52, marginBottom: 16 }}>🔄</div>
+        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 26, color: 'var(--navy)', letterSpacing: '0.04em', marginBottom: 10 }}>
+          Ranking en Actualización
+        </div>
+        <div style={{ fontSize: 14, color: 'var(--text-mid)', lineHeight: 1.7, maxWidth: 280, margin: '0 auto' }}>
+          Estamos registrando los resultados de la última jornada. El ranking actualizado estará disponible en unos minutos.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page">

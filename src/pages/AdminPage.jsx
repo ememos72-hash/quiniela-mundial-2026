@@ -684,6 +684,76 @@ const SlideEditor = ({ slide, index, total, onChange, onDelete }) => {
   );
 };
 
+// --- Ranking Visibility Toggle ---
+const RankingToggle = () => {
+  const [visible, setVisible] = useState(true);
+  const [saving, setSaving]   = useState(false);
+  const [loaded, setLoaded]   = useState(false);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'config', 'settings'), (snap) => {
+      if (snap.exists()) {
+        setVisible(snap.data().rankingVisible !== false);
+      } else {
+        setVisible(true);
+      }
+      setLoaded(true);
+    });
+    return unsub;
+  }, []);
+
+  const toggle = async () => {
+    setSaving(true);
+    const newVal = !visible;
+    await setDoc(doc(db, 'config', 'settings'), { rankingVisible: newVal }, { merge: true });
+    setVisible(newVal);
+    setSaving(false);
+  };
+
+  if (!loaded) return null;
+
+  return (
+    <div className="admin-section" style={{ marginBottom: 16 }}>
+      <div className="admin-section-title">🏆 Visibilidad del Ranking</div>
+      <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>
+        Cuando está desactivado, los jugadores ven un mensaje de "en actualización". Tú como admin siempre ves el ranking completo.
+      </div>
+      <div
+        onClick={saving ? undefined : toggle}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '14px 16px',
+          background: visible ? 'rgba(21,128,61,0.08)' : '#f8fafc',
+          border: `2px solid ${visible ? '#15803d' : 'var(--border)'}`,
+          borderRadius: 10, cursor: saving ? 'default' : 'pointer',
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: visible ? '#15803d' : 'var(--text-mid)' }}>
+            {visible ? '🟢 Ranking visible para todos' : '🔴 Ranking oculto (solo admin)'}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+            {visible ? 'Los jugadores pueden ver la clasificación' : 'Los jugadores ven "en actualización"'}
+          </div>
+        </div>
+        <div style={{
+          width: 44, height: 24, borderRadius: 12,
+          background: visible ? '#15803d' : '#cbd5e1',
+          position: 'relative', transition: 'background 0.2s',
+          opacity: saving ? 0.6 : 1,
+        }}>
+          <div style={{
+            position: 'absolute', top: 2, left: visible ? 22 : 2,
+            width: 20, height: 20, borderRadius: '50%',
+            background: '#fff', transition: 'left 0.2s',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+          }} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Anuncio / Popup Manager ---
 const AnuncioForm = () => {
   const [active, setActive]   = useState(false);
@@ -808,6 +878,29 @@ const JugadoresTab = () => {
     await setDoc(doc(db, 'users', u.id), { isPaid: !u.isPaid }, { merge: true });
   };
 
+  const deleteUser = async (u) => {
+    const confirmMsg =
+      `¿Eliminar a ${u.displayName || u.email}?\n\n` +
+      `Esto borra su perfil y todas sus predicciones de Firestore. ` +
+      `No se puede deshacer.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      // 1. Borrar todas las predicciones del jugador
+      const predsSnap = await getDocs(
+        query(collection(db, 'predictions'), where('userId', '==', u.id))
+      );
+      const batch = writeBatch(db);
+      predsSnap.docs.forEach(d => batch.delete(d.ref));
+
+      // 2. Borrar documento del usuario
+      batch.delete(doc(db, 'users', u.id));
+      await batch.commit();
+    } catch (e) {
+      alert('Error al eliminar: ' + e.message);
+    }
+  };
+
   const unpaidCount = users.filter(u => !u.isPaid).length;
 
   if (loading) return <div style={{ textAlign: 'center', padding: 30 }}><div className="spinner" /></div>;
@@ -872,27 +965,42 @@ const JugadoresTab = () => {
               </div>
             </div>
 
-            {/* Paid toggle */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-              <div
-                onClick={() => togglePaid(u)}
+            {/* Paid toggle + delete */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <div
+                  onClick={() => togglePaid(u)}
+                  style={{
+                    width: 44, height: 24, borderRadius: 12,
+                    background: u.isPaid ? '#15803d' : '#cbd5e1',
+                    position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
+                  }}
+                >
+                  <div style={{
+                    position: 'absolute', top: 2,
+                    left: u.isPaid ? 22 : 2,
+                    width: 20, height: 20, borderRadius: '50%',
+                    background: '#fff', transition: 'left 0.2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  }} />
+                </div>
+                <span style={{ fontSize: 10, color: u.isPaid ? '#15803d' : '#94a3b8', fontWeight: 600 }}>
+                  {u.isPaid ? 'Activo' : 'Pendiente'}
+                </span>
+              </div>
+              <button
+                onClick={() => deleteUser(u)}
+                title="Eliminar jugador"
                 style={{
-                  width: 44, height: 24, borderRadius: 12,
-                  background: u.isPaid ? '#15803d' : '#cbd5e1',
-                  position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
+                  background: '#fee2e2', border: 'none',
+                  borderRadius: 20, padding: '3px 10px',
+                  cursor: 'pointer', fontSize: 12,
+                  color: '#991b1b', fontWeight: 600,
+                  fontFamily: "'DM Sans', sans-serif",
                 }}
               >
-                <div style={{
-                  position: 'absolute', top: 2,
-                  left: u.isPaid ? 22 : 2,
-                  width: 20, height: 20, borderRadius: '50%',
-                  background: '#fff', transition: 'left 0.2s',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                }} />
-              </div>
-              <span style={{ fontSize: 10, color: u.isPaid ? '#15803d' : '#94a3b8', fontWeight: 600 }}>
-                {u.isPaid ? 'Activo' : 'Pendiente'}
-              </span>
+                🗑️ Eliminar
+              </button>
             </div>
           </div>
         </div>
@@ -991,7 +1099,12 @@ const AdminPage = () => {
         {tab === 'add' && <AddMatchForm />}
         {tab === 'flash' && <AddFlashForm matches={matches} />}
         {tab === 'jugadores' && <JugadoresTab />}
-        {tab === 'anuncios' && <AnuncioForm />}
+        {tab === 'anuncios' && (
+          <>
+            <RankingToggle />
+            <AnuncioForm />
+          </>
+        )}
       </div>
     </div>
   );
