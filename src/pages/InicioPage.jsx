@@ -12,7 +12,7 @@ import { useState, useEffect } from 'react';
 // =============================================================================
 const BIENVENIDA = {
   titulo: '¡Bienvenidos a La Quiniela!',
-  subtitulo: 'Mundial 2026 · 🇺🇸 · 🇨🇦 · 🇲🇽',
+  subtitulo: 'Mundial 2026 · USA · CAN · MEX',
   texto:
     'El torneo de predicciones más emocionante del año ya comenzó! ' +
     'Predice los resultados, acumula puntos y demuestra que tienes el ojo para el fútbol. ' +
