@@ -12,28 +12,30 @@ const RulesPage = () => {
 
   return (
     <div className="page">
-      {/* User info */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '12px 14px',
-        background: 'var(--navy)',
-        borderRadius: 'var(--radius)',
-        marginBottom: 20,
-      }}>
+      {/* User info — solo si hay sesión */}
+      {user && (
         <div style={{
-          width: 42, height: 42, borderRadius: '50%',
-          background: 'var(--gold)', color: 'var(--navy)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 16, fontWeight: 500,
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '12px 14px',
+          background: 'var(--navy)',
+          borderRadius: 'var(--radius)',
+          marginBottom: 20,
         }}>
-          {user?.displayName?.charAt(0)?.toUpperCase() || '?'}
+          <div style={{
+            width: 42, height: 42, borderRadius: '50%',
+            background: 'var(--gold)', color: 'var(--navy)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 16, fontWeight: 500,
+          }}>
+            {user?.displayName?.charAt(0)?.toUpperCase() || '?'}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ color: '#fff', fontWeight: 500, fontSize: 15 }}>{user?.displayName}</div>
+            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>{user?.email}</div>
+          </div>
+          {isAdmin && <span className="admin-badge">Admin</span>}
         </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ color: '#fff', fontWeight: 500, fontSize: 15 }}>{user?.displayName}</div>
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>{user?.email}</div>
-        </div>
-        {isAdmin && <span className="admin-badge">Admin</span>}
-      </div>
+      )}
 
       <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, letterSpacing: '0.04em', color: 'var(--navy)', marginBottom: 16 }}>
         Reglas y Puntos
@@ -94,22 +96,24 @@ const RulesPage = () => {
         </button>
       )}
 
-      {/* Logout */}
-      <button
-        onClick={handleLogout}
-        style={{
-          width: '100%', padding: 12,
-          background: 'transparent',
-          color: 'var(--text-mid)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius-sm)',
-          fontFamily: "'DM Sans', sans-serif",
-          fontSize: 14,
-          cursor: 'pointer',
-        }}
-      >
-        Cerrar sesión
-      </button>
+      {/* Logout — solo si hay sesión */}
+      {user && (
+        <button
+          onClick={handleLogout}
+          style={{
+            width: '100%', padding: 12,
+            background: 'transparent',
+            color: 'var(--text-mid)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-sm)',
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 14,
+            cursor: 'pointer',
+          }}
+        >
+          Cerrar sesión
+        </button>
+      )}
     </div>
   );
 };

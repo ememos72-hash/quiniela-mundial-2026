@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 // =============================================================================
 //  PÁGINA DE INICIO — La Quiniela · Mundial 2026
@@ -38,7 +40,7 @@ const ANUNCIOS = [
     contenido:
     'Ya puedes registrar tus predicciones para todos los partidos de la fase de grupos. ' +
     'Recuerda que los partidos se cierran cuando inician, ¡no te quedes sin predecir! Tendremos premios semanales para los líderes de cada jornada y un gran premio final para el campeón de la quiniela.',
-    imagen: 'https://i.postimg.cc/SKkNxPbM/Whats-App-Image-2026-04-17-at-2-42-43-PM.jpg',
+    imagen: 'https://i.postimg.cc/fyY0Q394/Laquiniela-01.png',
     fecha: '16 Abr 2026',
   },
   // --- Agrega más anuncios aquí arriba (copia el bloque de arriba) ---
@@ -136,6 +138,9 @@ const TIPO_CONFIG = {
 };
 
 const InicioPage = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   return (
     <div className="page">
 
@@ -176,6 +181,38 @@ const InicioPage = () => {
 
         {/* ── Countdown dentro del hero — quitar cuando empiece el mundial ── */}
         <CountdownCompact />
+
+        {/* ── Botón de registro solo si no está logueado ── */}
+        {!user && (
+          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              onClick={() => navigate('/register')}
+              style={{
+                width: '100%', padding: '12px 0',
+                background: 'var(--gold)', color: 'var(--navy)',
+                border: 'none', borderRadius: 10,
+                fontFamily: "'Bebas Neue', sans-serif",
+                fontSize: 18, letterSpacing: '0.06em',
+                cursor: 'pointer',
+              }}
+            >
+              ⚽ Unirme a la Quiniela
+            </button>
+            <button
+              onClick={() => navigate('/login')}
+              style={{
+                width: '100%', padding: '9px 0',
+                background: 'transparent', color: 'rgba(255,255,255,0.6)',
+                border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10,
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: 13, fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              Ya tengo cuenta — Iniciar sesión
+            </button>
+          </div>
+        )}
 
       </div>
 
