@@ -53,7 +53,7 @@ const AppShell = ({ children }) => {
         <div className="header-top">
           <div className="header-logo">
             <span className="header-logo-title">La Quiniela</span>
-            <span className="header-logo-sub">Mundial 2026 · USA · CAN · MEX</span>
+            <span className="header-logo-sub">Mundial 2026 · 🇺🇸 · 🇨🇦 · 🇲🇽</span>
           </div>
           {user && (
             <div className="header-user">

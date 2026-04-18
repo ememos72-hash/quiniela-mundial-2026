@@ -12,7 +12,7 @@ import { useState, useEffect } from 'react';
 // =============================================================================
 const BIENVENIDA = {
   titulo: '¡Bienvenidos a La Quiniela!',
-  subtitulo: 'Mundial 2026 · USA · CAN · MEX',
+  subtitulo: 'Mundial 2026 · 🇺🇸 · 🇨🇦 · 🇲🇽',
   texto:
     'El torneo de predicciones más emocionante del año ya comenzó! ' +
     'Predice los resultados, acumula puntos y demuestra que tienes el ojo para el fútbol. ' +
@@ -36,19 +36,19 @@ const ANUNCIOS = [
     tipo: 'noticia',
     titulo: '¡La Quiniela está activa!',
     contenido:
-      'Ya puedes registrar tus predicciones para todos los partidos de la fase de grupos. ' +
-      'Recuerda que los partidos se cierran cuando inician, ¡no te quedes sin predecir! Tendremos premios semanales para los líderes de cada jornada y un gran premio final para el campeón de la quiniela.',
+    'Ya puedes registrar tus predicciones para todos los partidos de la fase de grupos. ' +
+    'Recuerda que los partidos se cierran cuando inician, ¡no te quedes sin predecir! Tendremos premios semanales para los líderes de cada jornada y un gran premio final para el campeón de la quiniela.',
     imagen: 'https://i.postimg.cc/SKkNxPbM/Whats-App-Image-2026-04-17-at-2-42-43-PM.jpg',
     fecha: '16 Abr 2026',
   },
   // --- Agrega más anuncios aquí arriba (copia el bloque de arriba) ---
- {
-     tipo: 'premio',
-     titulo: '🎁 Sorpresa para el líder de la semana',
-     contenido: 'El jugador con más puntos al final de la Jornada 2 recibirá un premio especial.',
+ //{
+ //    tipo: 'premio',
+ //    titulo: '🎁 Sorpresa para el líder de la semana',
+ //    contenido: 'El jugador con más puntos al final de la Jornada 2 recibirá un premio especial.',
  //  imagen: 'https://i.postimg.cc/768NWZqj/2026-04-16-21-48-40.png',
-     fecha: '18 Jun 2026',
-  },
+ //    fecha: '18 Jun 2026',
+ // },
 //{
 //tipo: 'resultado',
 //   titulo: '⚽ Jornada 1 — Resumen',
@@ -274,4 +274,4 @@ const InicioPage = () => {
   );
 };
 
-export default InicioPage;
+export default Inic

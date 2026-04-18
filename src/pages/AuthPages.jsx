@@ -46,7 +46,7 @@ export const LoginPage = () => {
     <div className="auth-screen">
       <div className="auth-logo">
         <div className="auth-logo-title">La Quiniela</div>
-        <div className="auth-logo-sub">Mundial 2026 · USA · CAN · MEX</div>
+        <div className="auth-logo-sub">Mundial 2026 · 🇺🇸 · 🇨🇦 · 🇲🇽</div>
       </div>
       <div className="auth-card">
         <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, marginBottom: 20, letterSpacing: '0.04em' }}>
@@ -158,7 +158,7 @@ export const RegisterPage = () => {
     <div className="auth-screen">
       <div className="auth-logo">
         <div className="auth-logo-title">La Quiniela</div>
-        <div className="auth-logo-sub">Mundial 2026 · USA · CAN · MEX</div>
+        <div className="auth-logo-sub">Mundial 2026 · 🇺🇸 · 🇨🇦 · 🇲🇽</div>
       </div>
       <div className="auth-card">
         <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, marginBottom: 20, letterSpacing: '0.04em' }}>
