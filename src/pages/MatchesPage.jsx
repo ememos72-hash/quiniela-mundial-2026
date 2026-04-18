@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   collection, query, orderBy, onSnapshot,
-  doc, setDoc, getDoc
+  doc, setDoc, getDoc, where
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,6 +22,121 @@ const FlagImg = ({ team, size = 48 }) => {
 import { calculatePredictionPoints } from '../utils/points';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+
+// Tarjeta tipo recibo para "Mis Picks"
+const MyPickCard = ({ pred, match }) => {
+  const pts = match.result ? calculatePredictionPoints(pred, match) : null;
+
+  const pickLabel =
+    pred.result === 'teamA' ? match.teamA :
+    pred.result === 'teamB' ? match.teamB : 'Empate';
+
+  const matchDateStr = match.date
+    ? format(parseISO(match.date), "d 'de' MMM · HH:mm", { locale: es })
+    : '';
+
+  const fmtTs = (iso) => {
+    if (!iso) return null;
+    try { return format(new Date(iso), "d MMM yyyy · HH:mm:ss", { locale: es }); }
+    catch { return iso; }
+  };
+
+  const savedStr   = fmtTs(pred.savedAt);
+  const updatedStr = fmtTs(pred.updatedAt);
+  const wasEdited  = (pred.changeCount || 0) > 0;
+
+  // Color del pick según resultado
+  let pickBg = '#f0f9ff', pickColor = '#0369a1', pickBorder = '#bae6fd';
+  if (match.result) {
+    if (pts > 0) { pickBg = '#f0fdf4'; pickColor = '#15803d'; pickBorder = '#86efac'; }
+    else         { pickBg = '#fef2f2'; pickColor = '#991b1b'; pickBorder = '#fca5a5'; }
+  }
+
+  return (
+    <div style={{
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--radius)',
+      marginBottom: 10,
+      overflow: 'hidden',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+    }}>
+      {/* Cabecera: partido */}
+      <div style={{
+        background: 'var(--navy)',
+        padding: '8px 14px',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      }}>
+        <div style={{ color: '#fff', fontWeight: 600, fontSize: 13 }}>
+          {match.teamA} vs {match.teamB}
+        </div>
+        {match.result
+          ? <span style={{ fontSize: 11, background: pts > 0 ? '#15803d' : '#991b1b', color: '#fff', borderRadius: 20, padding: '2px 8px', fontWeight: 600 }}>
+              {pts > 0 ? `+${pts} pts` : '0 pts'}
+            </span>
+          : match.isOpen
+            ? <span style={{ fontSize: 11, background: 'var(--gold)', color: 'var(--navy)', borderRadius: 20, padding: '2px 8px', fontWeight: 600 }}>Abierto</span>
+            : <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.7)', borderRadius: 20, padding: '2px 8px' }}>Esperando</span>
+        }
+      </div>
+
+      <div style={{ padding: '10px 14px' }}>
+        {/* Fecha del partido */}
+        {matchDateStr && (
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
+            📅 Partido: {matchDateStr}
+            {match.result && (
+              <span style={{ marginLeft: 8, fontWeight: 600, color: 'var(--navy)' }}>
+                · Resultado: {match.result.teamAScore} - {match.result.teamBScore}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* El pick destacado */}
+        <div style={{
+          background: pickBg, border: `1px solid ${pickBorder}`,
+          borderRadius: 8, padding: '7px 12px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: 10,
+        }}>
+          <div>
+            <div style={{ fontSize: 10, color: pickColor, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: 2 }}>
+              Tu predicción
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: pickColor }}>
+              {pickLabel}
+              {pred.teamAScore !== undefined && (
+                <span style={{ fontSize: 13, marginLeft: 8, opacity: 0.8 }}>
+                  · {pred.teamAScore}-{pred.teamBScore}
+                </span>
+              )}
+            </div>
+          </div>
+          {match.result && (
+            <span style={{ fontSize: 20 }}>{pts > 0 ? '✅' : '❌'}</span>
+          )}
+        </div>
+
+        {/* Recibo de timestamps */}
+        <div style={{
+          background: '#f8fafc', borderRadius: 8, padding: '8px 12px',
+          borderLeft: '3px solid var(--navy)',
+          fontSize: 11, color: 'var(--text-mid)', lineHeight: 1.8,
+        }}>
+          <div>🕐 <strong>Guardado:</strong> {savedStr}</div>
+          {wasEdited && (
+            <div style={{ color: '#92400e' }}>
+              🔄 <strong>Último cambio:</strong> {updatedStr}
+              <span style={{ marginLeft: 6, background: '#fef3c7', color: '#92400e', borderRadius: 10, padding: '1px 6px', fontWeight: 600 }}>
+                {pred.changeCount} {pred.changeCount === 1 ? 'edición' : 'ediciones'}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Countdown compacto para partidos abiertos
 const MatchCountdown = ({ date }) => {
@@ -317,6 +432,8 @@ const MatchesPage = () => {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
   const [userPoints, setUserPoints] = useState({ total: 0, correct: 0, exact: 0 });
+  const [myPredictions, setMyPredictions] = useState([]);
+  const [loadingPicks, setLoadingPicks] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'matches'), orderBy('date', 'asc'));
@@ -346,6 +463,18 @@ const MatchesPage = () => {
     });
     return unsub;
   }, [user]);
+
+  // Cargar predicciones del usuario cuando se abre "Mis Picks"
+  useEffect(() => {
+    if (filter !== 'mispicks' || !user) return;
+    setLoadingPicks(true);
+    const q = query(collection(db, 'predictions'), where('userId', '==', user.uid));
+    const unsub = onSnapshot(q, snap => {
+      setMyPredictions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoadingPicks(false);
+    });
+    return unsub;
+  }, [filter, user]);
 
   const filtered = matches.filter(m => {
     if (filter === 'open') return m.isOpen && !m.result;
@@ -390,10 +519,11 @@ const MatchesPage = () => {
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 4, overflowX: 'auto', paddingBottom: 4 }}>
         {[
-          { key: 'all', label: 'Todos' },
-          { key: 'open', label: 'Abiertos' },
-          { key: 'closed', label: 'Por jugar' },
-          { key: 'played', label: 'Jugados' },
+          { key: 'all',      label: 'Todos' },
+          { key: 'open',     label: 'Abiertos' },
+          { key: 'closed',   label: 'Por jugar' },
+          { key: 'played',   label: 'Jugados' },
+          { key: 'mispicks', label: '🧾 Mis Picks' },
         ].map(f => (
           <button
             key={f.key}
@@ -415,22 +545,52 @@ const MatchesPage = () => {
         ))}
       </div>
 
-      {loading && <div className="page-loading"><div className="spinner" /></div>}
-
-      {!loading && Object.keys(grouped).length === 0 && (
-        <div className="text-center text-muted" style={{ marginTop: 40 }}>
-          No hay partidos disponibles aún
-        </div>
+      {/* Vista "Mis Picks" */}
+      {filter === 'mispicks' && (
+        <>
+          {loadingPicks && <div className="page-loading"><div className="spinner" /></div>}
+          {!loadingPicks && myPredictions.length === 0 && (
+            <div className="text-center text-muted" style={{ marginTop: 40 }}>
+              Aún no has guardado ninguna predicción
+            </div>
+          )}
+          {!loadingPicks && myPredictions.length > 0 && (
+            <>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center' }}>
+                {myPredictions.length} predicción{myPredictions.length !== 1 ? 'es' : ''} guardada{myPredictions.length !== 1 ? 's' : ''}
+              </div>
+              {myPredictions
+                .map(pred => ({ pred, match: matches.find(m => m.id === pred.matchId) }))
+                .filter(({ match }) => !!match)
+                .sort((a, b) => (a.match.date > b.match.date ? 1 : -1))
+                .map(({ pred, match }) => (
+                  <MyPickCard key={pred.id} pred={pred} match={match} />
+                ))
+              }
+            </>
+          )}
+        </>
       )}
 
-      {Object.entries(grouped).map(([phase, phaseMatches]) => (
-        <div key={phase}>
-          <div className="section-label">{PHASE_LABELS[phase] || phase}</div>
-          {phaseMatches.map(match => (
-            <MatchCard key={match.id} match={match} userId={user?.uid} />
+      {/* Vista normal de partidos */}
+      {filter !== 'mispicks' && (
+        <>
+          {loading && <div className="page-loading"><div className="spinner" /></div>}
+          {!loading && Object.keys(grouped).length === 0 && (
+            <div className="text-center text-muted" style={{ marginTop: 40 }}>
+              No hay partidos disponibles aún
+            </div>
+          )}
+          {Object.entries(grouped).map(([phase, phaseMatches]) => (
+            <div key={phase}>
+              <div className="section-label">{PHASE_LABELS[phase] || phase}</div>
+              {phaseMatches.map(match => (
+                <MatchCard key={match.id} match={match} userId={user?.uid} />
+              ))}
+            </div>
           ))}
-        </div>
-      ))}
+        </>
+      )}
     </div>
   );
 };
