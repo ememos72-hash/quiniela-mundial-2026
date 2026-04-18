@@ -13,12 +13,12 @@ import { useAuth } from '../contexts/AuthContext';
 //  Edita el título, subtítulo y el texto de bienvenida.
 // =============================================================================
 const BIENVENIDA = {
-  titulo: '¡Bienvenidos a La Quiniela!',
-  subtitulo: 'Mundial 2026 · USA · CAN · MEX',
+  titulo: 'La Quiniela del Mundial 2026',
+  subtitulo: 'Compite, predice y participa por grandes premios durante todo el torneo',
   texto:
-    'El torneo de predicciones más emocionante del año ya comenzó! ' +
-    'Predice los resultados, acumula puntos y demuestra que tienes el ojo para el fútbol. ' +
-    'Mucha suerte a todos!',
+    'Participa en una competencia de predicciones basada en los partidos del Mundial 2026.\n' +
+    'Acumula puntos jornada a jornada y compite contra otros jugadores por los primeros lugares.\n\n' +
+    'Mientras mejores sean tus predicciones, mayores serán tus posibilidades de ganar.',
 };
 
 // =============================================================================
@@ -36,10 +36,12 @@ const BIENVENIDA = {
 const ANUNCIOS = [
   {
     tipo: 'noticia',
-    titulo: '¡La Quiniela está activa!',
+    titulo: '¡La Quiniela del Mundial ya llegó! Ya está aquí...',
     contenido:
-    'Ya puedes registrar tus predicciones para todos los partidos de la fase de grupos. ' +
-    'Recuerda que los partidos se cierran cuando inician, ¡no te quedes sin predecir! Tendremos premios semanales para los líderes de cada jornada y un gran premio final para el campeón de la quiniela.',
+      'El Mundial empieza a sentirse y aunque aún faltan algunas semanas, este es el momento ideal para ir armando un buen grupo de participantes.\n\n' +
+      'Te invito a compartir esta información con tus amigos, compañeros de trabajo y todos esos futboleros de corazón. Se viene una competencia entretenida, bien organizada y con muy buenos premios.\n\n' +
+      'Si tienes dudas o quieres más información, con gusto te puedo ayudar.\n\n' +
+      'Emerson Monge\n8387-1924',
     imagen: 'https://i.postimg.cc/fyY0Q394/Laquiniela-01.png',
     fecha: '16 Abr 2026',
   },
@@ -115,7 +117,7 @@ const CountdownCompact = () => {
       borderTop: '1px solid rgba(255,255,255,0.1)',
     }}>
       <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>
-        ⏱ Faltan para el Mundial
+        ⏱ Faltan para el inicio del Mundial
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>{num(days)}{lbl('días')}</div>
@@ -163,11 +165,11 @@ const InicioPage = () => {
           {BIENVENIDA.titulo}
         </div>
         <div style={{
-          fontSize: 11,
-          color: 'rgba(255,255,255,0.5)',
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
+          fontSize: 10.5,
+          color: 'rgba(255,255,255,0.55)',
+          letterSpacing: '0.01em',
           marginBottom: 14,
+          lineHeight: 1.4,
         }}>
           {BIENVENIDA.subtitulo}
         </div>
