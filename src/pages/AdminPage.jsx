@@ -863,7 +863,12 @@ const JugadoresTab = () => {
                 </div>
               )}
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                Registro: {u.createdAt ? u.createdAt.slice(0, 10) : '—'}
+                Registro: {u.createdAt
+                  ? new Date(u.createdAt).toLocaleString('es-CR', {
+                      day: '2-digit', month: 'short', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                    })
+                  : '—'}
               </div>
             </div>
 

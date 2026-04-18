@@ -23,6 +23,43 @@ import { calculatePredictionPoints } from '../utils/points';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+// Countdown compacto para partidos abiertos
+const MatchCountdown = ({ date }) => {
+  const calc = () => {
+    const diff = new Date(date) - new Date();
+    if (diff <= 0) return null;
+    return {
+      diff,
+      h: Math.floor(diff / 3600000),
+      m: Math.floor((diff % 3600000) / 60000),
+      s: Math.floor((diff % 60000) / 1000),
+      totalMin: Math.floor(diff / 60000),
+    };
+  };
+  const [t, setT] = useState(calc);
+  useEffect(() => {
+    const id = setInterval(() => setT(calc()), 1000);
+    return () => clearInterval(id);
+  }, [date]);
+
+  if (!t) return null;
+
+  const color = t.totalMin < 30 ? '#991b1b' : t.totalMin < 60 ? '#92400e' : '#15803d';
+  const bg    = t.totalMin < 30 ? '#fee2e2' : t.totalMin < 60 ? '#fef3c7' : '#dcfce7';
+  const label = t.h > 0 ? `${t.h}h ${t.m}m` : `${t.m}m ${t.s}s`;
+
+  return (
+    <div style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      background: bg, color, borderRadius: 20,
+      padding: '3px 10px', fontSize: 12, fontWeight: 600,
+      marginBottom: 8,
+    }}>
+      ⏱ Inicia en: {label}
+    </div>
+  );
+};
+
 const MatchCard = ({ match, userId }) => {
   const [prediction, setPrediction] = useState(null);
   const [localPred, setLocalPred] = useState(null);
@@ -123,6 +160,13 @@ const MatchCard = ({ match, userId }) => {
           <span className="team-name">{match.teamB}</span>
         </div>
       </div>
+
+      {/* Countdown — solo partidos abiertos que aún no empiezan */}
+      {match.isOpen && !match.result && match.date && (
+        <div style={{ textAlign: 'center' }}>
+          <MatchCountdown date={match.date} />
+        </div>
+      )}
 
       {/* Prediction buttons — only if open */}
       {match.isOpen && !match.result && (

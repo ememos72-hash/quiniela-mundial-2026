@@ -129,22 +129,28 @@ export const LoginPage = () => {
 export const RegisterPage = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [name, setName]       = useState('');
-  const [email, setEmail]     = useState('');
-  const [phone, setPhone]     = useState('');
-  const [password, setPassword]   = useState('');
-  const [confirm, setConfirm]     = useState('');
-  const [error, setError]     = useState('');
-  const [loading, setLoading] = useState(false);
+  const [nombre,   setNombre]   = useState('');
+  const [apellido, setApellido] = useState('');
+  const [email, setEmail]       = useState('');
+  const [phone, setPhone]       = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm]   = useState('');
+  const [error, setError]       = useState('');
+  const [loading, setLoading]   = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (!nombre.trim())   return setError('Ingresa tu nombre');
+    if (!apellido.trim()) return setError('Ingresa tu apellido');
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length !== 8) return setError('El teléfono debe tener 8 dígitos (ej: 83871924 o 8387-1924)');
     if (password !== confirm) return setError('Las contraseñas no coinciden');
     if (password.length < 6) return setError('La contraseña debe tener al menos 6 caracteres');
     setLoading(true);
     try {
-      await register(email, password, name, phone);
+      const displayName = `${nombre.trim()} ${apellido.trim()}`;
+      await register(email, password, displayName, cleanPhone);
       navigate('/inicio');
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') setError('Este correo ya está registrado');
@@ -165,16 +171,29 @@ export const RegisterPage = () => {
           Crear Cuenta
         </h2>
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label">Tu nombre</label>
-            <input
-              className="form-input"
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Como quieres aparecer en el ranking"
-              required
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className="form-group">
+              <label className="form-label">Nombre</label>
+              <input
+                className="form-input"
+                type="text"
+                value={nombre}
+                onChange={e => setNombre(e.target.value)}
+                placeholder="Ej: Juan"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Apellido</label>
+              <input
+                className="form-input"
+                type="text"
+                value={apellido}
+                onChange={e => setApellido(e.target.value)}
+                placeholder="Ej: Pérez"
+                required
+              />
+            </div>
           </div>
           <div className="form-group">
             <label className="form-label">Correo electrónico</label>
@@ -194,7 +213,7 @@ export const RegisterPage = () => {
               type="tel"
               value={phone}
               onChange={e => setPhone(e.target.value)}
-              placeholder="Ej: 83871924"
+              placeholder="Ej: 83871924 o 8387-1924"
               required
             />
           </div>

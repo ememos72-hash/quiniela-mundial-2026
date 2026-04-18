@@ -91,15 +91,17 @@ const AppShell = ({ children }) => {
                   style={{
                     background: 'rgba(255,255,255,0.12)',
                     border: 'none',
-                    borderRadius: '50%',
-                    width: 30, height: 30,
+                    borderRadius: 20,
+                    padding: '5px 10px',
                     cursor: 'pointer',
-                    fontSize: 14,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11,
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontWeight: 600,
                     color: 'rgba(255,255,255,0.7)',
+                    whiteSpace: 'nowrap',
                   }}
                 >
-                  ⏻
+                  Salir
                 </button>
               </div>
             ) : (
