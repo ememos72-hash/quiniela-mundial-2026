@@ -274,4 +274,4 @@ const InicioPage = () => {
   );
 };
 
-export default Inic
+export default InicioPage;
