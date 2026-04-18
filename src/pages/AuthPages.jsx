@@ -129,11 +129,12 @@ export const LoginPage = () => {
 export const RegisterPage = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [error, setError] = useState('');
+  const [name, setName]       = useState('');
+  const [email, setEmail]     = useState('');
+  const [phone, setPhone]     = useState('');
+  const [password, setPassword]   = useState('');
+  const [confirm, setConfirm]     = useState('');
+  const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -143,7 +144,7 @@ export const RegisterPage = () => {
     if (password.length < 6) return setError('La contraseña debe tener al menos 6 caracteres');
     setLoading(true);
     try {
-      await register(email, password, name);
+      await register(email, password, name, phone);
       navigate('/inicio');
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') setError('Este correo ya está registrado');
@@ -183,6 +184,17 @@ export const RegisterPage = () => {
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="tu@correo.com"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Teléfono / WhatsApp</label>
+            <input
+              className="form-input"
+              type="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              placeholder="Ej: 83871924"
               required
             />
           </div>

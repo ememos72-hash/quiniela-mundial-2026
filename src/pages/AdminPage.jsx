@@ -791,11 +791,123 @@ const AnuncioForm = () => {
   );
 };
 
+// --- Jugadores Manager ---
+const JugadoresTab = () => {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+    return onSnapshot(q, snap => {
+      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    });
+  }, []);
+
+  const togglePaid = async (u) => {
+    await setDoc(doc(db, 'users', u.id), { isPaid: !u.isPaid }, { merge: true });
+  };
+
+  const unpaidCount = users.filter(u => !u.isPaid).length;
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 30 }}><div className="spinner" /></div>;
+
+  return (
+    <div>
+      {/* Summary */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+        <div style={{ flex: 1, background: 'var(--navy)', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, color: 'var(--gold-light)' }}>{users.length}</div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Registrados</div>
+        </div>
+        <div style={{ flex: 1, background: unpaidCount > 0 ? '#fee2e2' : '#dcfce7', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, color: unpaidCount > 0 ? '#991b1b' : '#15803d' }}>{unpaidCount}</div>
+          <div style={{ fontSize: 11, color: unpaidCount > 0 ? '#991b1b' : '#15803d', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Pendientes</div>
+        </div>
+        <div style={{ flex: 1, background: '#dcfce7', borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, color: '#15803d' }}>{users.filter(u => u.isPaid).length}</div>
+          <div style={{ fontSize: 11, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Activos</div>
+        </div>
+      </div>
+
+      {/* User list */}
+      {users.map(u => (
+        <div key={u.id} style={{
+          border: '1px solid var(--border)', borderRadius: 10,
+          padding: '12px 14px', marginBottom: 8,
+          background: u.isPaid ? '#f0fdf4' : '#fff',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--navy)', marginBottom: 2 }}>
+                {u.displayName || 'Sin nombre'}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {u.email}
+              </div>
+              {u.phone && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-mid)' }}>📱 {u.phone}</span>
+                  <a
+                    href={`https://wa.me/506${u.phone.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      fontSize: 11, padding: '2px 8px', borderRadius: 20,
+                      background: '#dcfce7', color: '#15803d',
+                      textDecoration: 'none', fontWeight: 600,
+                    }}
+                  >
+                    WhatsApp
+                  </a>
+                </div>
+              )}
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                Registro: {u.createdAt ? u.createdAt.slice(0, 10) : '—'}
+              </div>
+            </div>
+
+            {/* Paid toggle */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+              <div
+                onClick={() => togglePaid(u)}
+                style={{
+                  width: 44, height: 24, borderRadius: 12,
+                  background: u.isPaid ? '#15803d' : '#cbd5e1',
+                  position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
+                }}
+              >
+                <div style={{
+                  position: 'absolute', top: 2,
+                  left: u.isPaid ? 22 : 2,
+                  width: 20, height: 20, borderRadius: '50%',
+                  background: '#fff', transition: 'left 0.2s',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                }} />
+              </div>
+              <span style={{ fontSize: 10, color: u.isPaid ? '#15803d' : '#94a3b8', fontWeight: 600 }}>
+                {u.isPaid ? 'Activo' : 'Pendiente'}
+              </span>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {users.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-muted)', fontSize: 14 }}>
+          Aún no hay jugadores registrados.
+        </div>
+      )}
+    </div>
+  );
+};
+
 // --- Main Admin Page ---
 const AdminPage = () => {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
   const [matches, setMatches] = useState([]);
+  const [users, setUsers] = useState([]);
   const [tab, setTab] = useState('results');
 
   useEffect(() => {
@@ -809,11 +921,21 @@ const AdminPage = () => {
     });
   }, []);
 
+  useEffect(() => {
+    const q = query(collection(db, 'users'));
+    return onSnapshot(q, snap => {
+      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+  }, []);
+
   const openMatches = matches.filter(m => !m.result);
+  const pendingCount = users.filter(u => !u.isPaid).length;
+
   const tabs = [
-    { key: 'results', label: 'Resultados' },
-    { key: 'add', label: 'Agregar Partido' },
-    { key: 'flash', label: 'Flash ⚡' },
+    { key: 'results',  label: 'Resultados' },
+    { key: 'add',      label: 'Agregar Partido' },
+    { key: 'flash',    label: 'Flash ⚡' },
+    { key: 'jugadores', label: pendingCount > 0 ? `Jugadores 🔴${pendingCount}` : 'Jugadores' },
     { key: 'anuncios', label: 'Anuncios 📢' },
   ];
 
@@ -863,6 +985,7 @@ const AdminPage = () => {
 
         {tab === 'add' && <AddMatchForm />}
         {tab === 'flash' && <AddFlashForm matches={matches} />}
+        {tab === 'jugadores' && <JugadoresTab />}
         {tab === 'anuncios' && <AnuncioForm />}
       </div>
     </div>

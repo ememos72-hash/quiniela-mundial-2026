@@ -7,7 +7,7 @@ import {
   updateProfile,
   sendPasswordResetEmail,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
 const AuthContext = createContext();
@@ -27,44 +27,61 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+    let profileUnsub = null;
+
+    const authUnsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Clean up previous profile listener
+      if (profileUnsub) { profileUnsub(); profileUnsub = null; }
+
       if (firebaseUser) {
         setUser(firebaseUser);
         const userRef = doc(db, 'users', firebaseUser.uid);
-        const profileDoc = await getDoc(userRef);
-        if (profileDoc.exists()) {
-          setUserProfile(profileDoc.data());
-        } else {
-          // Recrear documento si fue borrado accidentalmente
-          const newProfile = {
-            uid: firebaseUser.uid,
-            displayName: firebaseUser.displayName || firebaseUser.email,
-            email: firebaseUser.email,
-            totalPoints: 0,
-            correctResults: 0,
-            exactScores: 0,
-            teamAdvances: 0,
-            createdAt: new Date().toISOString(),
-          };
-          await setDoc(userRef, newProfile);
-          setUserProfile(newProfile);
-        }
+
+        // Listen in real-time so isPaid changes reflect immediately without reload
+        profileUnsub = onSnapshot(userRef, async (snap) => {
+          if (snap.exists()) {
+            setUserProfile(snap.data());
+          } else {
+            // Crear documento si no existe
+            const newProfile = {
+              uid: firebaseUser.uid,
+              displayName: firebaseUser.displayName || firebaseUser.email,
+              email: firebaseUser.email,
+              phone: '',
+              isPaid: false,
+              totalPoints: 0,
+              correctResults: 0,
+              exactScores: 0,
+              teamAdvances: 0,
+              createdAt: new Date().toISOString(),
+            };
+            await setDoc(userRef, newProfile);
+            setUserProfile(newProfile);
+          }
+          setLoading(false);
+        });
       } else {
         setUser(null);
         setUserProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
-    return unsub;
+
+    return () => {
+      authUnsub();
+      if (profileUnsub) profileUnsub();
+    };
   }, []);
 
-  const register = async (email, password, displayName) => {
+  const register = async (email, password, displayName, phone) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName });
     await setDoc(doc(db, 'users', cred.user.uid), {
       uid: cred.user.uid,
       displayName,
       email,
+      phone: phone || '',
+      isPaid: false,
       totalPoints: 0,
       correctResults: 0,
       exactScores: 0,

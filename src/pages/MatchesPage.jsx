@@ -245,8 +245,29 @@ const MatchCard = ({ match, userId }) => {
   );
 };
 
+const PaymentGate = () => (
+  <div className="page" style={{ textAlign: 'center', paddingTop: 40 }}>
+    <div style={{ fontSize: 52, marginBottom: 16 }}>🔒</div>
+    <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 26, color: 'var(--navy)', letterSpacing: '0.04em', marginBottom: 10 }}>
+      Acceso Pendiente
+    </div>
+    <div style={{ fontSize: 14, color: 'var(--text-mid)', lineHeight: 1.7, maxWidth: 280, margin: '0 auto 24px' }}>
+      Tu cuenta aún no ha sido activada. Una vez confirmado tu pago de inscripción, el administrador activará tu acceso.
+    </div>
+    <div style={{
+      border: '1px solid var(--border)', borderRadius: 12,
+      padding: '16px 20px', background: '#f8fafc',
+      maxWidth: 280, margin: '0 auto',
+      fontSize: 13, color: 'var(--text-mid)', lineHeight: 1.7,
+    }}>
+      <div style={{ fontWeight: 600, color: 'var(--navy)', marginBottom: 4 }}>¿Ya pagaste?</div>
+      Contacta al administrador por WhatsApp para que active tu cuenta.
+    </div>
+  </div>
+);
+
 const MatchesPage = () => {
-  const { user } = useAuth();
+  const { user, userProfile, isAdmin } = useAuth();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -302,6 +323,9 @@ const MatchesPage = () => {
       <div style={{ textAlign: 'center', padding: 40, color: '#991b1b' }}>{error}</div>
     </div>
   );
+
+  // Payment gate — admins always have access
+  if (!isAdmin && userProfile && userProfile.isPaid !== true) return <PaymentGate />;
 
   return (
     <div className="page">
