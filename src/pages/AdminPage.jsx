@@ -1015,6 +1015,230 @@ const JugadoresTab = () => {
   );
 };
 
+// --- Reportes por partido ---
+const ReportesTab = ({ matches, users }) => {
+  const [selectedId, setSelectedId]   = useState('');
+  const [predictions, setPredictions] = useState([]);
+  const [loading, setLoading]         = useState(false);
+  const [copied, setCopied]           = useState('');
+
+  const selectedMatch = matches.find(m => m.id === selectedId);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    setLoading(true);
+    const q = query(collection(db, 'predictions'), where('matchId', '==', selectedId));
+    const unsub = onSnapshot(q, snap => {
+      setPredictions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    });
+    return unsub;
+  }, [selectedId]);
+
+  // Combinar usuarios con su predicción, ordenado por nombre
+  const rows = [...users]
+    .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || '', 'es'))
+    .map(u => ({
+      user: u,
+      pred: predictions.find(p => p.userId === u.id) || null,
+    }));
+
+  const pickLabel = (pred) => {
+    if (!pred) return null;
+    if (pred.result === 'teamA') return selectedMatch?.teamA;
+    if (pred.result === 'teamB') return selectedMatch?.teamB;
+    return 'Empate';
+  };
+
+  const getPts = (pred) => {
+    if (!pred || !selectedMatch?.result) return null;
+    return calculatePredictionPoints(pred, selectedMatch);
+  };
+
+  const fmtDate = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('es-CR', { day: 'numeric', month: 'short' }) +
+             ' · ' + d.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' });
+    } catch { return dateStr; }
+  };
+
+  const copyForWhatsApp = (withPoints) => {
+    if (!selectedMatch) return;
+    const dateStr = fmtDate(selectedMatch.date);
+    const predCount = rows.filter(r => r.pred).length;
+
+    let lines = [];
+    lines.push(`⚽ *${selectedMatch.teamA} vs ${selectedMatch.teamB}*`);
+    if (dateStr) lines.push(`📅 ${dateStr}`);
+    if (withPoints && selectedMatch.result) {
+      lines.push(`🏆 Resultado: *${selectedMatch.result.teamAScore} - ${selectedMatch.result.teamBScore}*`);
+    }
+    lines.push('─────────────────');
+
+    rows.forEach(({ user, pred }, i) => {
+      const num = `${i + 1}.`;
+      const name = user.displayName || user.email || '?';
+      if (!pred) {
+        lines.push(`${num} ${name} — ❌ No predijo`);
+        return;
+      }
+      const pick = pickLabel(pred);
+      const score = pred.teamAScore !== undefined ? ` (${pred.teamAScore}-${pred.teamBScore})` : '';
+      if (withPoints && selectedMatch.result) {
+        const p = getPts(pred);
+        const icon = p >= 5 ? '⭐' : p >= 3 ? '✅' : '❌';
+        lines.push(`${num} ${name} — ${icon} ${pick}${score} → *${p} pts*`);
+      } else {
+        lines.push(`${num} ${name} — ✅ ${pick}${score}`);
+      }
+    });
+
+    lines.push('─────────────────');
+    lines.push(`📊 ${predCount} de ${rows.length} jugadores predijeron`);
+
+    navigator.clipboard.writeText(lines.join('\n'));
+    setCopied(withPoints ? 'pts' : 'preds');
+    setTimeout(() => setCopied(''), 2500);
+  };
+
+  return (
+    <div>
+      <div className="admin-section">
+        <div className="admin-section-title">📊 Reporte por Partido</div>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>
+          Selecciona un partido para ver todas las predicciones y copiar el reporte para WhatsApp.
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Partido</label>
+          <select className="form-input" value={selectedId} onChange={e => setSelectedId(e.target.value)}>
+            <option value="">— Elegir partido —</option>
+            {[...matches].sort((a, b) => (a.date > b.date ? 1 : -1)).map(m => (
+              <option key={m.id} value={m.id}>
+                {m.teamA} vs {m.teamB}
+                {m.date ? `  ·  ${m.date.slice(0, 10)}` : ''}
+                {m.result ? '  ✓' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {selectedMatch && !loading && (
+          <>
+            {/* Botones de copiar */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <button
+                onClick={() => copyForWhatsApp(false)}
+                style={{
+                  flex: 1, padding: '11px 0',
+                  background: copied === 'preds' ? '#15803d' : 'var(--navy)',
+                  color: '#fff', border: 'none', borderRadius: 10,
+                  fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600,
+                  cursor: 'pointer', transition: 'background 0.2s',
+                }}
+              >
+                {copied === 'preds' ? '✓ ¡Copiado!' : '📋 Copiar predicciones'}
+              </button>
+              {selectedMatch.result && (
+                <button
+                  onClick={() => copyForWhatsApp(true)}
+                  style={{
+                    flex: 1, padding: '11px 0',
+                    background: copied === 'pts' ? '#15803d' : 'var(--gold)',
+                    color: copied === 'pts' ? '#fff' : 'var(--navy)',
+                    border: 'none', borderRadius: 10,
+                    fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600,
+                    cursor: 'pointer', transition: 'background 0.2s',
+                  }}
+                >
+                  {copied === 'pts' ? '✓ ¡Copiado!' : '🏆 Copiar con puntos'}
+                </button>
+              )}
+            </div>
+
+            {/* Tabla */}
+            <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
+              {/* Header */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: selectedMatch.result ? '28px 1fr 100px 44px' : '28px 1fr 100px',
+                background: 'var(--navy)', color: '#fff',
+                padding: '8px 10px', fontSize: 11,
+                fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+                gap: 6,
+              }}>
+                <span>#</span>
+                <span>Jugador</span>
+                <span style={{ textAlign: 'center' }}>Predicción</span>
+                {selectedMatch.result && <span style={{ textAlign: 'center' }}>Pts</span>}
+              </div>
+
+              {rows.map(({ user, pred }, i) => {
+                const p = getPts(pred);
+                const pick = pickLabel(pred);
+                const rowBg = i % 2 === 0 ? '#fff' : '#f8fafc';
+                let pickBg = '#e0f2fe', pickColor = '#0369a1';
+                if (selectedMatch.result && pred) {
+                  pickBg = p > 0 ? '#dcfce7' : '#fee2e2';
+                  pickColor = p > 0 ? '#15803d' : '#991b1b';
+                }
+                return (
+                  <div
+                    key={user.id}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: selectedMatch.result ? '28px 1fr 100px 44px' : '28px 1fr 100px',
+                      padding: '8px 10px', background: rowBg,
+                      borderTop: '1px solid var(--border)',
+                      alignItems: 'center', gap: 6, fontSize: 12,
+                    }}
+                  >
+                    <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{i + 1}</span>
+                    <span style={{ fontWeight: 500, color: 'var(--navy)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {user.displayName || user.email}
+                    </span>
+                    <div style={{ textAlign: 'center' }}>
+                      {pred ? (
+                        <span style={{
+                          background: pickBg, color: pickColor,
+                          borderRadius: 20, padding: '2px 8px',
+                          fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap',
+                        }}>
+                          {pick}
+                          {pred.teamAScore !== undefined && ` ${pred.teamAScore}-${pred.teamBScore}`}
+                        </span>
+                      ) : (
+                        <span style={{ color: '#cbd5e1', fontSize: 11, fontStyle: 'italic' }}>No predijo</span>
+                      )}
+                    </div>
+                    {selectedMatch.result && (
+                      <div style={{
+                        textAlign: 'center', fontWeight: 700,
+                        color: p >= 5 ? '#7c3aed' : p >= 3 ? '#15803d' : p === 0 && pred ? '#991b1b' : 'var(--text-muted)',
+                        fontSize: 13,
+                      }}>
+                        {pred ? (p > 0 ? `+${p}` : '0') : '—'}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: 'var(--text-muted)' }}>
+              {rows.filter(r => r.pred).length} de {rows.length} jugadores predijeron
+            </div>
+          </>
+        )}
+
+        {loading && <div style={{ textAlign: 'center', padding: 20 }}><div className="spinner" /></div>}
+      </div>
+    </div>
+  );
+};
+
 // --- Main Admin Page ---
 const AdminPage = () => {
   const { isAdmin } = useAuth();
@@ -1045,11 +1269,12 @@ const AdminPage = () => {
   const pendingCount = users.filter(u => !u.isPaid).length;
 
   const tabs = [
-    { key: 'results',  label: 'Resultados' },
-    { key: 'add',      label: 'Agregar Partido' },
-    { key: 'flash',    label: 'Flash ⚡' },
+    { key: 'results',   label: 'Resultados' },
+    { key: 'add',       label: 'Agregar' },
+    { key: 'reportes',  label: '📊 Reportes' },
+    { key: 'flash',     label: 'Flash ⚡' },
     { key: 'jugadores', label: pendingCount > 0 ? `Jugadores 🔴${pendingCount}` : 'Jugadores' },
-    { key: 'anuncios', label: 'Anuncios 📢' },
+    { key: 'anuncios',  label: 'Anuncios 📢' },
   ];
 
   return (
@@ -1097,6 +1322,7 @@ const AdminPage = () => {
         )}
 
         {tab === 'add' && <AddMatchForm />}
+        {tab === 'reportes' && <ReportesTab matches={matches} users={users} />}
         {tab === 'flash' && <AddFlashForm matches={matches} />}
         {tab === 'jugadores' && <JugadoresTab />}
         {tab === 'anuncios' && (

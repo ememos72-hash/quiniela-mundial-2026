@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   collection, query, orderBy, onSnapshot,
-  doc, setDoc, getDoc, where
+  doc, setDoc, getDoc, where, getDocs
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
@@ -138,6 +138,163 @@ const MyPickCard = ({ pred, match }) => {
   );
 };
 
+// Picks de la comunidad (cerrados y jugados)
+const CommunityPicks = ({ match, userId, allUsers, show, onToggle, preds, setPreds, loading, setLoading }) => {
+  const hasResult = !!match.result;
+
+  const loadPreds = async () => {
+    if (preds.length > 0) return; // ya cargados
+    setLoading(true);
+    const snap = await getDocs(query(collection(db, 'predictions'), where('matchId', '==', match.id)));
+    setPreds(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    setLoading(false);
+  };
+
+  const handleToggle = () => {
+    if (!show) loadPreds();
+    onToggle();
+  };
+
+  // Distribución de votos
+  const countA    = preds.filter(p => p.result === 'teamA').length;
+  const countDraw = preds.filter(p => p.result === 'draw').length;
+  const countB    = preds.filter(p => p.result === 'teamB').length;
+  const total     = preds.length;
+
+  const pct = (n) => total > 0 ? Math.round((n / total) * 100) : 0;
+
+  const pickLabel = (result) => {
+    if (result === 'teamA') return match.teamA;
+    if (result === 'teamB') return match.teamB;
+    return 'Empate';
+  };
+
+  const getPts = (pred) => {
+    if (!match.result) return null;
+    return calculatePredictionPoints(pred, match);
+  };
+
+  // Lista ordenada: con predicción primero (por puntos desc), luego sin
+  const rows = allUsers.map(u => ({
+    user: u,
+    pred: preds.find(p => p.userId === u.id) || null,
+  })).sort((a, b) => {
+    if (!a.pred && !b.pred) return 0;
+    if (!a.pred) return 1;
+    if (!b.pred) return -1;
+    if (hasResult) {
+      const pA = getPts(a.pred) || 0;
+      const pB = getPts(b.pred) || 0;
+      return pB - pA;
+    }
+    return 0;
+  });
+
+  const correctCount = hasResult ? preds.filter(p => getPts(p) > 0).length : 0;
+
+  return (
+    <div style={{ marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+      {/* Botón toggle */}
+      <button
+        onClick={handleToggle}
+        style={{
+          width: '100%', padding: '7px 0',
+          background: show ? '#f0f9ff' : 'transparent',
+          border: `1px solid ${show ? '#bae6fd' : 'var(--border)'}`,
+          borderRadius: 8, cursor: 'pointer',
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: 12, fontWeight: 600,
+          color: show ? '#0369a1' : 'var(--text-mid)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        }}
+      >
+        {show ? '▲ Ocultar picks' : hasResult
+          ? `👥 Ver picks de todos · ${correctCount} acertaron`
+          : `📊 Ver distribución`}
+      </button>
+
+      {show && (
+        <div style={{ marginTop: 10 }}>
+          {loading && (
+            <div style={{ textAlign: 'center', padding: 12 }}><div className="spinner" /></div>
+          )}
+
+          {!loading && preds.length === 0 && (
+            <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', padding: 8 }}>
+              Nadie ha predicho este partido aún
+            </div>
+          )}
+
+          {!loading && preds.length > 0 && (
+            <>
+              {/* Barra de distribución */}
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', height: 8, marginBottom: 6 }}>
+                  {countA > 0 && <div style={{ flex: countA, background: '#3b82f6' }} />}
+                  {countDraw > 0 && <div style={{ flex: countDraw, background: '#94a3b8' }} />}
+                  {countB > 0 && <div style={{ flex: countB, background: '#f59e0b' }} />}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-mid)' }}>
+                  <span style={{ color: '#3b82f6', fontWeight: 600 }}>{match.teamA} {pct(countA)}% ({countA})</span>
+                  {countDraw > 0 && <span style={{ color: '#64748b', fontWeight: 600 }}>Empate {pct(countDraw)}% ({countDraw})</span>}
+                  <span style={{ color: '#f59e0b', fontWeight: 600 }}>{match.teamB} {pct(countB)}% ({countB})</span>
+                </div>
+              </div>
+
+              {/* Lista completa con nombres */}
+              {allUsers.length > 0 && rows.map(({ user, pred }) => {
+                const pts = pred ? getPts(pred) : null;
+                const isMe = user.id === userId;
+                const label = pred ? pickLabel(pred.result) : null;
+                let rowBg = 'transparent';
+                if (hasResult && pred) rowBg = pts > 0 ? '#f0fdf4' : '#fef2f2';
+                if (isMe) rowBg = '#fefce8';
+
+                return (
+                  <div key={user.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '5px 8px', borderRadius: 6, background: rowBg,
+                    marginBottom: 2, fontSize: 12,
+                  }}>
+                    <span style={{ color: 'var(--navy)', fontWeight: isMe ? 700 : 400 }}>
+                      {user.displayName || user.email}
+                      {isMe && <span style={{ marginLeft: 4, fontSize: 10, background: 'var(--gold)', color: 'var(--navy)', borderRadius: 10, padding: '1px 5px' }}>Tú</span>}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {pred ? (
+                        <>
+                          <span style={{
+                            fontSize: 11, fontWeight: 600,
+                            color: hasResult ? (pts > 0 ? '#15803d' : '#991b1b') : '#0369a1',
+                          }}>
+                            {label}
+                            {pred.teamAScore !== undefined && ` (${pred.teamAScore}-${pred.teamBScore})`}
+                          </span>
+                          {hasResult && (
+                            <span style={{ fontWeight: 700, fontSize: 12, color: pts >= 5 ? '#7c3aed' : pts >= 3 ? '#15803d' : '#991b1b' }}>
+                              {pts > 0 ? `+${pts}` : '0'}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span style={{ fontSize: 11, color: '#cbd5e1', fontStyle: 'italic' }}>No predijo</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+                {total} de {allUsers.length} jugadores predijeron
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Countdown compacto para partidos abiertos
 const MatchCountdown = ({ date }) => {
   const calc = () => {
@@ -175,13 +332,16 @@ const MatchCountdown = ({ date }) => {
   );
 };
 
-const MatchCard = ({ match, userId }) => {
+const MatchCard = ({ match, userId, allUsers }) => {
   const [prediction, setPrediction] = useState(null);
   const [localPred, setLocalPred] = useState(null);
   const [scoreA, setScoreA] = useState('');
   const [scoreB, setScoreB] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showPicks, setShowPicks]       = useState(false);
+  const [matchPreds, setMatchPreds]     = useState([]);
+  const [picksLoading, setPicksLoading] = useState(false);
 
   const allowExactScore = EXACT_SCORE_PHASES.includes(match.phase);
 
@@ -400,6 +560,21 @@ const MatchCard = ({ match, userId }) => {
           <span>0 pts</span>
         </div>
       )}
+
+      {/* ── Picks comunitarios (solo partidos cerrados o jugados) ── */}
+      {!match.isOpen && (
+        <CommunityPicks
+          match={match}
+          userId={userId}
+          allUsers={allUsers}
+          show={showPicks}
+          onToggle={() => setShowPicks(v => !v)}
+          preds={matchPreds}
+          setPreds={setMatchPreds}
+          loading={picksLoading}
+          setLoading={setPicksLoading}
+        />
+      )}
     </div>
   );
 };
@@ -433,7 +608,8 @@ const MatchesPage = () => {
   const [filter, setFilter] = useState('all');
   const [userPoints, setUserPoints] = useState({ total: 0, correct: 0, exact: 0 });
   const [myPredictions, setMyPredictions] = useState([]);
-  const [loadingPicks, setLoadingPicks] = useState(false);
+  const [loadingPicks, setLoadingPicks]   = useState(false);
+  const [allUsers, setAllUsers]           = useState([]);
 
   useEffect(() => {
     const q = query(collection(db, 'matches'), orderBy('date', 'asc'));
@@ -463,6 +639,14 @@ const MatchesPage = () => {
     });
     return unsub;
   }, [user]);
+
+  // Cargar todos los usuarios (para mostrar nombres en picks comunitarios)
+  useEffect(() => {
+    const q = query(collection(db, 'users'), orderBy('displayName', 'asc'));
+    return onSnapshot(q, snap => {
+      setAllUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+  }, []);
 
   // Cargar predicciones del usuario cuando se abre "Mis Picks"
   useEffect(() => {
@@ -585,7 +769,7 @@ const MatchesPage = () => {
             <div key={phase}>
               <div className="section-label">{PHASE_LABELS[phase] || phase}</div>
               {phaseMatches.map(match => (
-                <MatchCard key={match.id} match={match} userId={user?.uid} />
+                <MatchCard key={match.id} match={match} userId={user?.uid} allUsers={allUsers} />
               ))}
             </div>
           ))}
