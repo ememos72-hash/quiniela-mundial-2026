@@ -332,32 +332,27 @@ const MatchCountdown = ({ date }) => {
   );
 };
 
-const MatchCard = ({ match, userId, allUsers }) => {
+const MatchCard = ({ match, userId, allUsers, userPrediction }) => {
   const [prediction, setPrediction] = useState(null);
-  const [localPred, setLocalPred] = useState(null);
-  const [scoreA, setScoreA] = useState('');
-  const [scoreB, setScoreB] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [localPred, setLocalPred]   = useState(null);
+  const [scoreA, setScoreA]         = useState('');
+  const [scoreB, setScoreB]         = useState('');
+  const [saving, setSaving]         = useState(false);
+  const [saved, setSaved]           = useState(false);
   const [showPicks, setShowPicks]       = useState(false);
   const [matchPreds, setMatchPreds]     = useState([]);
   const [picksLoading, setPicksLoading] = useState(false);
 
   const allowExactScore = EXACT_SCORE_PHASES.includes(match.phase);
 
+  // Sincronizar con la predicción que viene del query centralizado
   useEffect(() => {
-    if (!userId || !match.id) return;
-    const ref = doc(db, 'predictions', `${userId}_${match.id}`);
-    getDoc(ref).then(snap => {
-      if (snap.exists()) {
-        const data = snap.data();
-        setPrediction(data);
-        setLocalPred(data.result);
-        if (data.teamAScore !== undefined) setScoreA(String(data.teamAScore));
-        if (data.teamBScore !== undefined) setScoreB(String(data.teamBScore));
-      }
-    });
-  }, [userId, match.id]);
+    if (!userPrediction) return;
+    setPrediction(userPrediction);
+    setLocalPred(userPrediction.result);
+    if (userPrediction.teamAScore !== undefined) setScoreA(String(userPrediction.teamAScore));
+    if (userPrediction.teamBScore !== undefined) setScoreB(String(userPrediction.teamBScore));
+  }, [userPrediction?.updatedAt, userPrediction?.matchId]);
 
   const savePrediction = async () => {
     if (!localPred || saving) return;
@@ -607,9 +602,8 @@ const MatchesPage = () => {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
   const [userPoints, setUserPoints] = useState({ total: 0, correct: 0, exact: 0 });
-  const [myPredictions, setMyPredictions] = useState([]);
-  const [loadingPicks, setLoadingPicks]   = useState(false);
-  const [allUsers, setAllUsers]           = useState([]);
+  const [userPredictions, setUserPredictions] = useState([]); // todas las predicciones del usuario — 1 sola query
+  const [allUsers, setAllUsers]               = useState([]);
 
   useEffect(() => {
     const q = query(collection(db, 'matches'), orderBy('date', 'asc'));
@@ -640,25 +634,22 @@ const MatchesPage = () => {
     return unsub;
   }, [user]);
 
-  // Cargar todos los usuarios (para mostrar nombres en picks comunitarios)
+  // UNA sola query para todas las predicciones del usuario (reemplaza 78 getDoc individuales)
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'predictions'), where('userId', '==', user.uid));
+    return onSnapshot(q, snap => {
+      setUserPredictions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+  }, [user]);
+
+  // Cargar todos los usuarios (para picks comunitarios)
   useEffect(() => {
     const q = query(collection(db, 'users'), orderBy('displayName', 'asc'));
     return onSnapshot(q, snap => {
       setAllUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
   }, []);
-
-  // Cargar predicciones del usuario cuando se abre "Mis Picks"
-  useEffect(() => {
-    if (filter !== 'mispicks' || !user) return;
-    setLoadingPicks(true);
-    const q = query(collection(db, 'predictions'), where('userId', '==', user.uid));
-    const unsub = onSnapshot(q, snap => {
-      setMyPredictions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setLoadingPicks(false);
-    });
-    return unsub;
-  }, [filter, user]);
 
   const filtered = matches.filter(m => {
     if (filter === 'open') return m.isOpen && !m.result;
@@ -729,21 +720,20 @@ const MatchesPage = () => {
         ))}
       </div>
 
-      {/* Vista "Mis Picks" */}
+      {/* Vista "Mis Picks" — reutiliza userPredictions, sin query extra */}
       {filter === 'mispicks' && (
         <>
-          {loadingPicks && <div className="page-loading"><div className="spinner" /></div>}
-          {!loadingPicks && myPredictions.length === 0 && (
+          {userPredictions.length === 0 && (
             <div className="text-center text-muted" style={{ marginTop: 40 }}>
               Aún no has guardado ninguna predicción
             </div>
           )}
-          {!loadingPicks && myPredictions.length > 0 && (
+          {userPredictions.length > 0 && (
             <>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center' }}>
-                {myPredictions.length} predicción{myPredictions.length !== 1 ? 'es' : ''} guardada{myPredictions.length !== 1 ? 's' : ''}
+                {userPredictions.length} predicción{userPredictions.length !== 1 ? 'es' : ''} guardada{userPredictions.length !== 1 ? 's' : ''}
               </div>
-              {myPredictions
+              {userPredictions
                 .map(pred => ({ pred, match: matches.find(m => m.id === pred.matchId) }))
                 .filter(({ match }) => !!match)
                 .sort((a, b) => (a.match.date > b.match.date ? 1 : -1))
@@ -769,7 +759,13 @@ const MatchesPage = () => {
             <div key={phase}>
               <div className="section-label">{PHASE_LABELS[phase] || phase}</div>
               {phaseMatches.map(match => (
-                <MatchCard key={match.id} match={match} userId={user?.uid} allUsers={allUsers} />
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  userId={user?.uid}
+                  allUsers={allUsers}
+                  userPrediction={userPredictions.find(p => p.matchId === match.id) || null}
+                />
               ))}
             </div>
           ))}
