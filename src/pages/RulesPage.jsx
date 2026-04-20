@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 // ─────────────────────────────────────────────────────────────────────────────
 //  Componente: tarjeta de puntos (3 pts, 5 pts, 1 pto)
 // ─────────────────────────────────────────────────────────────────────────────
-const PuntosCard = ({ pts, label, descripcion, destacado }) => (
+const PuntosCard = ({ pts, label, descripcion, destacado, nota }) => (
   <div style={{
     display: 'flex',
     alignItems: 'center',
@@ -54,6 +54,11 @@ const PuntosCard = ({ pts, label, descripcion, destacado }) => (
           <span style={{ color: 'var(--gold)', fontWeight: 600 }}>{destacado}</span>
         )}
       </div>
+      {nota && (
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 5 }}>
+          * {nota}
+        </div>
+      )}
     </div>
   </div>
 );
@@ -61,21 +66,18 @@ const PuntosCard = ({ pts, label, descripcion, destacado }) => (
 // ─────────────────────────────────────────────────────────────────────────────
 //  Componente: ítem de Consideraciones
 // ─────────────────────────────────────────────────────────────────────────────
-const ConsideracionItem = ({ icon, children }) => (
+const ConsideracionItem = ({ children }) => (
   <div style={{
-    display: 'flex', alignItems: 'flex-start', gap: 12,
+    display: 'flex', alignItems: 'flex-start', gap: 10,
     marginBottom: 14,
   }}>
     <div style={{
-      width: 36, height: 36, flexShrink: 0,
+      width: 6, height: 6, flexShrink: 0,
       borderRadius: '50%',
-      background: 'var(--navy)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 18,
-    }}>
-      {icon}
-    </div>
-    <div style={{ fontSize: 13, color: 'var(--text-mid)', lineHeight: 1.6, paddingTop: 4 }}>
+      background: 'var(--gold)',
+      marginTop: 6,
+    }} />
+    <div style={{ fontSize: 13, color: 'var(--text-mid)', lineHeight: 1.6 }}>
       {children}
     </div>
   </div>
@@ -155,20 +157,16 @@ const RulesPage = () => {
         label="Resultado del partido"
         descripcion="Acertar el equipo ganador o empate otorga"
         destacado="3 puntos."
+        nota="Aplica en todas las fases del torneo."
       />
-      <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: -6, marginBottom: 12, paddingLeft: 4 }}>
-        * Aplica en todas las fases del torneo.
-      </div>
 
       <PuntosCard
         pts={5}
         label="Marcador exacto"
         descripcion="Se podrá predecir el marcador final del partido. Cada acierto otorga"
         destacado="5 puntos."
+        nota="Aplica a partir de Dieciseisavos de Final."
       />
-      <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: -6, marginBottom: 12, paddingLeft: 4 }}>
-        * Aplica a partir de Dieciseisavos de Final.
-      </div>
 
       <PuntosCard
         pts={1}
@@ -219,23 +217,23 @@ const RulesPage = () => {
       ══════════════════════════════════════════════ */}
       <SectionHeader icon="📋" title="Consideraciones Importantes" />
 
-      <ConsideracionItem icon="⭐">
+      <ConsideracionItem>
         <strong>Los puntos se asignan únicamente según las reglas descritas.</strong>
         <br />
         <span style={{ color: 'var(--text-muted)' }}>No existe ninguna otra forma de acumular puntos.</span>
       </ConsideracionItem>
 
-      <ConsideracionItem icon="⏰">
+      <ConsideracionItem>
         Para efectos de puntuación, se considera el resultado al finalizar los{' '}
         <strong>90 minutos reglamentarios</strong>, incluyendo el tiempo de reposición,
         y los <strong>tiempos extra</strong> en caso de existir.
       </ConsideracionItem>
 
-      <ConsideracionItem icon="🥅">
+      <ConsideracionItem>
         Las tandas de penales <strong>no se consideran</strong> para efectos de puntuación.
       </ConsideracionItem>
 
-      <ConsideracionItem icon="🛡️">
+      <ConsideracionItem>
         La organización se reserva el derecho de aclarar cualquier situación
         no contemplada en estas reglas.
       </ConsideracionItem>

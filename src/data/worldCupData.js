@@ -6,15 +6,17 @@ export const PHASES = {
   ROUND_OF_16: 'round_of_16',
   QUARTERS: 'quarters',
   SEMIS: 'semis',
+  THIRD_PLACE: 'third_place',
   FINAL: 'final',
 };
 
 export const PHASE_LABELS = {
   groups: 'Fase de Grupos',
-  round_of_32: 'Ronda de 32',
+  round_of_32: 'Dieciseisavos de Final',
   round_of_16: 'Octavos de Final',
   quarters: 'Cuartos de Final',
   semis: 'Semifinales',
+  third_place: 'Tercer Puesto',
   final: 'Final',
 };
 
@@ -25,11 +27,13 @@ export const POINTS = {
   TEAM_ADVANCES: 1,       // Equipo que avanza en grupos (desempate)
 };
 
-// Fases donde se permite marcador exacto
+// Fases donde se permite marcador exacto (desde Dieciseisavos en adelante)
 export const EXACT_SCORE_PHASES = [
+  PHASES.ROUND_OF_32,
   PHASES.ROUND_OF_16,
   PHASES.QUARTERS,
   PHASES.SEMIS,
+  PHASES.THIRD_PLACE,
   PHASES.FINAL,
 ];
 
@@ -248,4 +252,48 @@ export const SAMPLE_MATCHES = [
   { id: 'match_046', phase: PHASES.GROUPS, group: 'L', teamA: 'Panamá', teamB: 'Croacia', date: '2026-06-23T17:00:00', venue: 'Estadio de Toronto (Toronto)', isOpen: true, result: null },
   { id: 'match_067', phase: PHASES.GROUPS, group: 'L', teamA: 'Panamá', teamB: 'Inglaterra', date: '2026-06-27T15:00:00', venue: 'Estadio Nueva York/Nueva Jersey (Nueva York)', isOpen: true, result: null },
   { id: 'match_068', phase: PHASES.GROUPS, group: 'L', teamA: 'Croacia', teamB: 'Ghana', date: '2026-06-27T15:00:00', venue: 'Estadio Filadelfia (Filadelfia)', isOpen: true, result: null },
+
+  // ── DIECISEISAVOS DE FINAL (P73–P88) ──
+  { id: 'match_073', phase: PHASES.ROUND_OF_32, group: null, teamA: '2A', teamB: '2B', date: '2026-06-28T13:00:00', venue: 'Estadio Los Angeles (Los Ángeles)', isOpen: false, result: null },
+  { id: 'match_076', phase: PHASES.ROUND_OF_32, group: null, teamA: '1C', teamB: '2F', date: '2026-06-29T11:00:00', venue: 'Estadio Houston (Houston)', isOpen: false, result: null },
+  { id: 'match_074', phase: PHASES.ROUND_OF_32, group: null, teamA: '1E', teamB: '3ABCDF', date: '2026-06-29T14:30:00', venue: 'Estadio Boston (Boston)', isOpen: false, result: null },
+  { id: 'match_075', phase: PHASES.ROUND_OF_32, group: null, teamA: '1F', teamB: '2C', date: '2026-06-29T19:00:00', venue: 'Estadio Monterrey (Monterrey)', isOpen: false, result: null },
+  { id: 'match_077', phase: PHASES.ROUND_OF_32, group: null, teamA: '2E', teamB: '2I', date: '2026-06-30T11:00:00', venue: 'Estadio Dallas (Dallas)', isOpen: false, result: null },
+  { id: 'match_078', phase: PHASES.ROUND_OF_32, group: null, teamA: '1I', teamB: '3CDFGH', date: '2026-06-30T15:00:00', venue: 'Estadio Nueva York/Nueva Jersey (Nueva York)', isOpen: false, result: null },
+  { id: 'match_079', phase: PHASES.ROUND_OF_32, group: null, teamA: '1A', teamB: '3CEFHI', date: '2026-06-30T19:00:00', venue: 'Estadio Ciudad de México (Ciudad de México)', isOpen: false, result: null },
+  { id: 'match_080', phase: PHASES.ROUND_OF_32, group: null, teamA: '1L', teamB: '3EHIJK', date: '2026-07-01T10:00:00', venue: 'Estadio Atlanta (Atlanta)', isOpen: false, result: null },
+  { id: 'match_081', phase: PHASES.ROUND_OF_32, group: null, teamA: '1G', teamB: '3AEHIJ', date: '2026-07-01T14:00:00', venue: 'Estadio de Seattle (Seattle)', isOpen: false, result: null },
+  { id: 'match_082', phase: PHASES.ROUND_OF_32, group: null, teamA: '1D', teamB: '3BEFIJ', date: '2026-07-01T18:00:00', venue: 'Estadio de la Bahía de San Francisco (San Francisco)', isOpen: false, result: null },
+  { id: 'match_083', phase: PHASES.ROUND_OF_32, group: null, teamA: '1H', teamB: '2J', date: '2026-07-02T13:00:00', venue: 'Estadio Los Angeles (Los Ángeles)', isOpen: false, result: null },
+  { id: 'match_084', phase: PHASES.ROUND_OF_32, group: null, teamA: '2K', teamB: '2L', date: '2026-07-02T17:00:00', venue: 'Estadio de Toronto (Toronto)', isOpen: false, result: null },
+  { id: 'match_085', phase: PHASES.ROUND_OF_32, group: null, teamA: '1B', teamB: '3EFGIJ', date: '2026-07-02T21:00:00', venue: 'Estadio BC Place Vancouver (Vancouver)', isOpen: false, result: null },
+  { id: 'match_086', phase: PHASES.ROUND_OF_32, group: null, teamA: '2D', teamB: '2G', date: '2026-07-03T12:00:00', venue: 'Estadio Dallas (Dallas)', isOpen: false, result: null },
+  { id: 'match_087', phase: PHASES.ROUND_OF_32, group: null, teamA: '1J', teamB: '2H', date: '2026-07-03T16:00:00', venue: 'Estadio Miami (Miami)', isOpen: false, result: null },
+  { id: 'match_088', phase: PHASES.ROUND_OF_32, group: null, teamA: '1K', teamB: '3DEIJL', date: '2026-07-03T19:30:00', venue: 'Estadio Kansas City (Kansas City)', isOpen: false, result: null },
+
+  // ── OCTAVOS DE FINAL (P89–P96) ──
+  { id: 'match_089', phase: PHASES.ROUND_OF_16, group: null, teamA: 'W74', teamB: 'W77', date: '2026-07-04T11:00:00', venue: 'Estadio Houston (Houston)', isOpen: false, result: null },
+  { id: 'match_090', phase: PHASES.ROUND_OF_16, group: null, teamA: 'W73', teamB: 'W75', date: '2026-07-04T15:00:00', venue: 'Estadio Filadelfia (Filadelfia)', isOpen: false, result: null },
+  { id: 'match_091', phase: PHASES.ROUND_OF_16, group: null, teamA: 'W76', teamB: 'W78', date: '2026-07-05T14:00:00', venue: 'Estadio Nueva York/Nueva Jersey (Nueva York)', isOpen: false, result: null },
+  { id: 'match_092', phase: PHASES.ROUND_OF_16, group: null, teamA: 'W79', teamB: 'W80', date: '2026-07-05T18:00:00', venue: 'Estadio Ciudad de México (Ciudad de México)', isOpen: false, result: null },
+  { id: 'match_093', phase: PHASES.ROUND_OF_16, group: null, teamA: 'W83', teamB: 'W84', date: '2026-07-06T13:00:00', venue: 'Estadio Dallas (Dallas)', isOpen: false, result: null },
+  { id: 'match_094', phase: PHASES.ROUND_OF_16, group: null, teamA: 'W81', teamB: 'W82', date: '2026-07-06T18:00:00', venue: 'Estadio de Seattle (Seattle)', isOpen: false, result: null },
+  { id: 'match_095', phase: PHASES.ROUND_OF_16, group: null, teamA: 'W86', teamB: 'W88', date: '2026-07-07T10:00:00', venue: 'Estadio Atlanta (Atlanta)', isOpen: false, result: null },
+  { id: 'match_096', phase: PHASES.ROUND_OF_16, group: null, teamA: 'W85', teamB: 'W87', date: '2026-07-07T14:00:00', venue: 'Estadio BC Place Vancouver (Vancouver)', isOpen: false, result: null },
+
+  // ── CUARTOS DE FINAL (P97–P100) ──
+  { id: 'match_097', phase: PHASES.QUARTERS, group: null, teamA: 'W89', teamB: 'W90', date: '2026-07-09T14:00:00', venue: 'Estadio Boston (Boston)', isOpen: false, result: null },
+  { id: 'match_098', phase: PHASES.QUARTERS, group: null, teamA: 'W93', teamB: 'W94', date: '2026-07-10T13:00:00', venue: 'Estadio Los Angeles (Los Ángeles)', isOpen: false, result: null },
+  { id: 'match_099', phase: PHASES.QUARTERS, group: null, teamA: 'W91', teamB: 'W92', date: '2026-07-11T15:00:00', venue: 'Estadio Miami (Miami)', isOpen: false, result: null },
+  { id: 'match_100', phase: PHASES.QUARTERS, group: null, teamA: 'W95', teamB: 'W96', date: '2026-07-11T19:00:00', venue: 'Estadio Kansas City (Kansas City)', isOpen: false, result: null },
+
+  // ── SEMIFINALES (P101–P102) ──
+  { id: 'match_101', phase: PHASES.SEMIS, group: null, teamA: 'W97', teamB: 'W98', date: '2026-07-14T13:00:00', venue: 'Estadio Dallas (Dallas)', isOpen: false, result: null },
+  { id: 'match_102', phase: PHASES.SEMIS, group: null, teamA: 'W99', teamB: 'W100', date: '2026-07-15T13:00:00', venue: 'Estadio Atlanta (Atlanta)', isOpen: false, result: null },
+
+  // ── TERCER PUESTO (P103) ──
+  { id: 'match_103', phase: PHASES.THIRD_PLACE, group: null, teamA: 'RU101', teamB: 'RU102', date: '2026-07-18T15:00:00', venue: 'Estadio Miami (Miami)', isOpen: false, result: null },
+
+  // ── FINAL (P104) ──
+  { id: 'match_104', phase: PHASES.FINAL, group: null, teamA: 'W101', teamB: 'W102', date: '2026-07-19T13:00:00', venue: 'Estadio Nueva York/Nueva Jersey (Nueva York)', isOpen: false, result: null },
 ];
