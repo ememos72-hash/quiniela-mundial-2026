@@ -93,7 +93,7 @@ const SectionHeader = ({ icon, title }) => (
     display: 'flex', alignItems: 'center', gap: 10,
     marginBottom: 14,
   }}>
-    <span style={{ fontSize: 22 }}>{icon}</span>
+    {icon && <span style={{ fontSize: 22 }}>{icon}</span>}
     <span style={{
       fontFamily: "'Bebas Neue', sans-serif",
       fontSize: 22, letterSpacing: '0.06em',
@@ -220,7 +220,7 @@ const RulesPage = () => {
       {/* ══════════════════════════════════════════════
           SECCIÓN 1 — REGLAS Y MECÁNICA DE JUEGO
       ══════════════════════════════════════════════ */}
-      <SectionHeader icon="🏆" title="Reglas y Mecánica de Juego" />
+      <SectionHeader icon="" title="Reglas y Mecánica de Juego" />
 
       <div style={{ fontSize: 13, color: 'var(--text-mid)', marginBottom: 14, lineHeight: 1.5 }}>
         A lo largo del torneo, los jugadores acumularán puntos según sus predicciones.
@@ -290,7 +290,7 @@ const RulesPage = () => {
       {/* ══════════════════════════════════════════════
           SECCIÓN 4 — CONSIDERACIONES IMPORTANTES
       ══════════════════════════════════════════════ */}
-      <SectionHeader icon="📋" title="Consideraciones Importantes" />
+      <SectionHeader icon="" title="Consideraciones Importantes" />
 
       <ConsideracionItem>
         <strong>Los puntos se asignan únicamente según las reglas descritas.</strong>
