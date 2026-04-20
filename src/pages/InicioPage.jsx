@@ -312,13 +312,13 @@ const InicioPage = () => {
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                     marginTop: 14,
-                    padding: '11px 16px',
-                    background: '#25D366',
-                    color: '#fff',
-                    borderRadius: 10,
-                    fontSize: 14, fontWeight: 700,
-                    textDecoration: 'none',
-                    letterSpacing: '0.02em',
+                    padding: '12px 0',
+                    width: '100%',
+                    background: 'var(--gold)', color: 'var(--navy)',
+                    border: 'none', borderRadius: 10,
+                    fontFamily: "'Bebas Neue', sans-serif",
+                    fontSize: 18, letterSpacing: '0.06em',
+                    textDecoration: 'none', cursor: 'pointer',
                   }}
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
