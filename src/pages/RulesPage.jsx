@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import MundialFormatoModal from '../components/MundialFormatoModal';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Componente: tarjeta de puntos (3 pts, 5 pts, 1 pto)
@@ -109,6 +111,7 @@ const SectionHeader = ({ icon, title }) => (
 const RulesPage = () => {
   const { user, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
+  const [showFormato, setShowFormato] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -142,6 +145,52 @@ const RulesPage = () => {
           {isAdmin && <span className="admin-badge">Admin</span>}
         </div>
       )}
+
+      {/* ══════════════════════════════════════════════
+          SECCIÓN 0 — FORMATO DEL MUNDIAL
+      ══════════════════════════════════════════════ */}
+      <button
+        onClick={() => setShowFormato(true)}
+        style={{
+          width: '100%',
+          background: 'var(--navy)',
+          border: '1px solid rgba(212,175,55,0.3)',
+          borderRadius: 'var(--radius)',
+          padding: '14px 16px',
+          marginBottom: 20,
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          textAlign: 'left',
+        }}
+      >
+        <div style={{
+          width: 44, height: 44, flexShrink: 0,
+          borderRadius: '50%',
+          background: 'rgba(212,175,55,0.15)',
+          border: '1.5px solid var(--gold)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 22,
+        }}>
+          🌍
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: 15, letterSpacing: '0.06em',
+            color: '#fff', marginBottom: 3,
+          }}>
+            ¿Cómo se jugará el Mundial 2026?
+          </div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.4 }}>
+            48 selecciones · Nuevo formato · Fases y fechas clave
+          </div>
+        </div>
+        <div style={{ fontSize: 16, color: 'var(--gold-light)', flexShrink: 0 }}>›</div>
+      </button>
+
+      {showFormato && <MundialFormatoModal onClose={() => setShowFormato(false)} />}
 
       {/* ══════════════════════════════════════════════
           SECCIÓN 1 — SISTEMA DE PUNTOS
