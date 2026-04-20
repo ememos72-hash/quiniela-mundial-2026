@@ -124,25 +124,50 @@ const RulesPage = () => {
       {/* ── Perfil de usuario (solo si está logueado) ── */}
       {user && (
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '12px 14px',
-          background: 'var(--navy)',
           borderRadius: 'var(--radius)',
           marginBottom: 20,
+          border: '1px solid var(--border)',
+          background: '#fff',
+          overflow: 'hidden',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
         }}>
-          <div style={{
-            width: 42, height: 42, borderRadius: '50%',
-            background: 'var(--gold)', color: 'var(--navy)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 16, fontWeight: 600,
-          }}>
-            {user?.displayName?.charAt(0)?.toUpperCase() || '?'}
+          {/* franja superior dorada */}
+          <div style={{ height: 4, background: 'linear-gradient(90deg, var(--navy), var(--gold))' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px' }}>
+            {/* avatar grande con inicial */}
+            <div style={{
+              width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
+              background: 'var(--navy)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: "'Bebas Neue', sans-serif",
+              fontSize: 22, color: 'var(--gold-light)', letterSpacing: '0.04em',
+            }}>
+              {user?.displayName?.charAt(0)?.toUpperCase() || '?'}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                fontFamily: "'Bebas Neue', sans-serif",
+                fontSize: 18, letterSpacing: '0.04em',
+                color: 'var(--navy)', lineHeight: 1.1,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                {user?.displayName}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                {user?.email}
+              </div>
+            </div>
+            {isAdmin && (
+              <span style={{
+                fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                background: 'var(--gold)', color: 'var(--navy)',
+                borderRadius: 20, padding: '3px 10px', flexShrink: 0,
+              }}>
+                Admin
+              </span>
+            )}
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ color: '#fff', fontWeight: 500, fontSize: 15 }}>{user?.displayName}</div>
-            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>{user?.email}</div>
-          </div>
-          {isAdmin && <span className="admin-badge">Admin</span>}
         </div>
       )}
 
@@ -193,9 +218,9 @@ const RulesPage = () => {
       {showFormato && <MundialFormatoModal onClose={() => setShowFormato(false)} />}
 
       {/* ══════════════════════════════════════════════
-          SECCIÓN 1 — SISTEMA DE PUNTOS
+          SECCIÓN 1 — REGLAS Y MECÁNICA DE JUEGO
       ══════════════════════════════════════════════ */}
-      <SectionHeader icon="🏆" title="Sistema de Puntos" />
+      <SectionHeader icon="🏆" title="Reglas y Mecánica de Juego" />
 
       <div style={{ fontSize: 13, color: 'var(--text-mid)', marginBottom: 14, lineHeight: 1.5 }}>
         A lo largo del torneo, los jugadores acumularán puntos según sus predicciones.
@@ -261,110 +286,6 @@ const RulesPage = () => {
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════════
-          SECCIÓN 3 — DINÁMICA DE LOS PARTIDOS
-      ══════════════════════════════════════════════ */}
-      <SectionHeader icon="🔄" title="Dinámica de los Partidos" />
-
-      <div style={{ fontSize: 13, color: 'var(--text-mid)', marginBottom: 16, lineHeight: 1.5 }}>
-        Cada partido pasa por tres etapas. Conocerlas te ayuda a saber cuándo podés predecir y cuándo no.
-      </div>
-
-      {/* Etapa 1 — Abierto */}
-      <div style={{
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)',
-        padding: '14px 14px',
-        marginBottom: 10,
-        background: '#fff',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-        display: 'flex', gap: 14, alignItems: 'flex-start',
-      }}>
-        <div style={{
-          minWidth: 52, height: 58,
-          background: '#dcfce7',
-          borderRadius: 10,
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-        }}>
-          <span style={{ fontSize: 20 }}>🟢</span>
-          <span style={{ fontSize: 8, color: '#15803d', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>Abierto</span>
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 14, letterSpacing: '0.06em', color: 'var(--navy)', marginBottom: 4 }}>
-            El partido está disponible para predecir
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-mid)', lineHeight: 1.55 }}>
-            El administrador abre el partido con anticipación. Podés ingresar o modificar tu predicción tantas veces como quieras mientras permanezca abierto.
-          </div>
-        </div>
-      </div>
-
-      {/* Etapa 2 — Cerrado */}
-      <div style={{
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)',
-        padding: '14px 14px',
-        marginBottom: 10,
-        background: '#fff',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-        display: 'flex', gap: 14, alignItems: 'flex-start',
-      }}>
-        <div style={{
-          minWidth: 52, height: 58,
-          background: '#fef3c7',
-          borderRadius: 10,
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-        }}>
-          <span style={{ fontSize: 20 }}>🔒</span>
-          <span style={{ fontSize: 8, color: '#92400e', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>Cerrado</span>
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 14, letterSpacing: '0.06em', color: 'var(--navy)', marginBottom: 4 }}>
-            Predicciones bloqueadas — partido por iniciar
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-mid)', lineHeight: 1.55 }}>
-            Antes del pitazo inicial, el administrador cierra el partido. A partir de ese momento <strong>ninguna predicción puede modificarse</strong>. Lo que guardaste es tu apuesta final.
-          </div>
-        </div>
-      </div>
-
-      {/* Etapa 3 — Resultado */}
-      <div style={{
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)',
-        padding: '14px 14px',
-        marginBottom: 20,
-        background: '#fff',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-        display: 'flex', gap: 14, alignItems: 'flex-start',
-      }}>
-        <div style={{
-          minWidth: 52, height: 58,
-          background: '#f1f5f9',
-          borderRadius: 10,
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-        }}>
-          <span style={{ fontSize: 20 }}>✅</span>
-          <span style={{ fontSize: 8, color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>Jugado</span>
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 14, letterSpacing: '0.06em', color: 'var(--navy)', marginBottom: 4 }}>
-            El administrador ingresa el resultado final
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-mid)', lineHeight: 1.55 }}>
-            Una vez finalizado el partido, se registra el marcador oficial. Los puntos se calculan y se reflejan automáticamente en el ranking.
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 5 }}>
-            * Se considera el resultado al finalizar los 90 minutos reglamentarios + tiempo de reposición, y tiempos extra si los hay. Los penales <strong>no</strong> cuentan para la puntuación.
-          </div>
-        </div>
-      </div>
 
       {/* ══════════════════════════════════════════════
           SECCIÓN 4 — CONSIDERACIONES IMPORTANTES
@@ -375,6 +296,22 @@ const RulesPage = () => {
         <strong>Los puntos se asignan únicamente según las reglas descritas.</strong>
         <br />
         <span style={{ color: 'var(--text-muted)' }}>No existe ninguna otra forma de acumular puntos.</span>
+      </ConsideracionItem>
+
+      <ConsideracionItem>
+        Un partido <strong>Abierto</strong> permite ingresar o modificar tu predicción tantas veces como quieras mientras permanezca en ese estado.
+      </ConsideracionItem>
+
+      <ConsideracionItem>
+        A la hora del pitazo inicial el partido se cierra. Ninguna predicción puede modificarse — lo que guardaste es tu <strong>respuesta final</strong>.
+      </ConsideracionItem>
+
+      <ConsideracionItem>
+        Una vez finalizado el partido, el administrador ingresa el marcador oficial y los puntos se calculan automáticamente en el ranking.
+      </ConsideracionItem>
+
+      <ConsideracionItem>
+        Para efectos de puntuación se considera el resultado al finalizar los <strong>90 minutos reglamentarios</strong> incluyendo tiempo de reposición, y tiempos extra si los hay. Las tandas de penales <strong>no</strong> cuentan.
       </ConsideracionItem>
 
       <ConsideracionItem>
