@@ -262,6 +262,111 @@ const RulesPage = () => {
       </div>
 
       {/* ══════════════════════════════════════════════
+          SECCIÓN 3 — DINÁMICA DE LOS PARTIDOS
+      ══════════════════════════════════════════════ */}
+      <SectionHeader icon="🔄" title="Dinámica de los Partidos" />
+
+      <div style={{ fontSize: 13, color: 'var(--text-mid)', marginBottom: 16, lineHeight: 1.5 }}>
+        Cada partido pasa por tres etapas. Conocerlas te ayuda a saber cuándo podés predecir y cuándo no.
+      </div>
+
+      {/* Etapa 1 — Abierto */}
+      <div style={{
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius)',
+        padding: '14px 14px',
+        marginBottom: 10,
+        background: '#fff',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+        display: 'flex', gap: 14, alignItems: 'flex-start',
+      }}>
+        <div style={{
+          minWidth: 52, height: 58,
+          background: '#dcfce7',
+          borderRadius: 10,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 20 }}>🟢</span>
+          <span style={{ fontSize: 8, color: '#15803d', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>Abierto</span>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 14, letterSpacing: '0.06em', color: 'var(--navy)', marginBottom: 4 }}>
+            El partido está disponible para predecir
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-mid)', lineHeight: 1.55 }}>
+            El administrador abre el partido con anticipación. Podés ingresar o modificar tu predicción tantas veces como quieras mientras permanezca abierto.
+          </div>
+        </div>
+      </div>
+
+      {/* Etapa 2 — Cerrado */}
+      <div style={{
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius)',
+        padding: '14px 14px',
+        marginBottom: 10,
+        background: '#fff',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+        display: 'flex', gap: 14, alignItems: 'flex-start',
+      }}>
+        <div style={{
+          minWidth: 52, height: 58,
+          background: '#fef3c7',
+          borderRadius: 10,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 20 }}>🔒</span>
+          <span style={{ fontSize: 8, color: '#92400e', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>Cerrado</span>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 14, letterSpacing: '0.06em', color: 'var(--navy)', marginBottom: 4 }}>
+            Predicciones bloqueadas — partido por iniciar
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-mid)', lineHeight: 1.55 }}>
+            Antes del pitazo inicial, el administrador cierra el partido. A partir de ese momento <strong>ninguna predicción puede modificarse</strong>. Lo que guardaste es tu apuesta final.
+          </div>
+        </div>
+      </div>
+
+      {/* Etapa 3 — Resultado */}
+      <div style={{
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius)',
+        padding: '14px 14px',
+        marginBottom: 20,
+        background: '#fff',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+        display: 'flex', gap: 14, alignItems: 'flex-start',
+      }}>
+        <div style={{
+          minWidth: 52, height: 58,
+          background: '#f1f5f9',
+          borderRadius: 10,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 20 }}>✅</span>
+          <span style={{ fontSize: 8, color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>Jugado</span>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 14, letterSpacing: '0.06em', color: 'var(--navy)', marginBottom: 4 }}>
+            El administrador ingresa el resultado final
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-mid)', lineHeight: 1.55 }}>
+            Una vez finalizado el partido, se registra el marcador oficial. Los puntos se calculan y se reflejan automáticamente en el ranking.
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 5 }}>
+            * Se considera el resultado al finalizar los 90 minutos reglamentarios + tiempo de reposición, y tiempos extra si los hay. Los penales <strong>no</strong> cuentan para la puntuación.
+          </div>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════
           SECCIÓN 4 — CONSIDERACIONES IMPORTANTES
       ══════════════════════════════════════════════ */}
       <SectionHeader icon="📋" title="Consideraciones Importantes" />
@@ -270,16 +375,6 @@ const RulesPage = () => {
         <strong>Los puntos se asignan únicamente según las reglas descritas.</strong>
         <br />
         <span style={{ color: 'var(--text-muted)' }}>No existe ninguna otra forma de acumular puntos.</span>
-      </ConsideracionItem>
-
-      <ConsideracionItem>
-        Para efectos de puntuación, se considera el resultado al finalizar los{' '}
-        <strong>90 minutos reglamentarios</strong>, incluyendo el tiempo de reposición,
-        y los <strong>tiempos extra</strong> en caso de existir.
-      </ConsideracionItem>
-
-      <ConsideracionItem>
-        Las tandas de penales <strong>no se consideran</strong> para efectos de puntuación.
       </ConsideracionItem>
 
       <ConsideracionItem>
