@@ -213,6 +213,20 @@ const InicioPage = () => {
             >
               Ya tengo cuenta — Iniciar sesión
             </button>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 2, lineHeight: 1.5 }}>
+              ¿No tienes claro cómo funciona La Quiniela?{' '}
+              <span
+                onClick={() => navigate('/info')}
+                style={{
+                  color: 'var(--gold)',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  textDecorationColor: 'rgba(212,175,55,0.4)',
+                }}
+              >
+                En "Info" encontrarás todos los detalles
+              </span>
+            </div>
           </div>
         )}
 

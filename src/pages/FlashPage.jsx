@@ -322,6 +322,26 @@ const FlashPage = () => {
         Quiniela Flash ⚡
       </h2>
 
+      {/* ── ¿Qué es la Quiniela Flash? ── */}
+      <div style={{
+        background: 'var(--navy)',
+        borderRadius: 'var(--radius)',
+        padding: '16px 18px',
+        marginBottom: 20,
+        display: 'flex', alignItems: 'center', gap: 14,
+      }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)', lineHeight: 1.65 }}>
+            La <span style={{ color: 'var(--gold-light)', fontWeight: 600 }}>Quiniela Flash</span> se desarrolla durante un período específico definido por el administrador (por ejemplo, una jornada completa).{' '}
+            Se aplican las mismas reglas de puntuación.{' '}
+            Al finalizar el período, se definirá uno o varios ganadores para esa etapa.
+          </div>
+        </div>
+        <div style={{ fontSize: 48, opacity: 0.2, flexShrink: 0, lineHeight: 1, transform: 'rotate(15deg)' }}>
+          ⚽
+        </div>
+      </div>
+
       {loading && <div className="page-loading"><div className="spinner" /></div>}
 
       {/* Active */}
