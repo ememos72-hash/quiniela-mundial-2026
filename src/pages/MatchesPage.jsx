@@ -600,7 +600,8 @@ const MatchesPage = () => {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('open');
+  const [openDay, setOpenDay] = useState(null); // acordeón
   const [userPoints, setUserPoints] = useState({ total: 0, correct: 0, exact: 0 });
   const [userPredictions, setUserPredictions] = useState([]); // todas las predicciones del usuario — 1 sola query
   const [allUsers, setAllUsers]               = useState([]);
@@ -658,11 +659,11 @@ const MatchesPage = () => {
     return true;
   });
 
-  // Group by phase
+  // Agrupar por fecha (día)
   const grouped = filtered.reduce((acc, m) => {
-    const key = m.phase;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(m);
+    const day = m.date ? m.date.slice(0, 10) : 'Sin fecha';
+    if (!acc[day]) acc[day] = [];
+    acc[day].push(m);
     return acc;
   }, {});
 
@@ -692,17 +693,17 @@ const MatchesPage = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 4, overflowX: 'auto', paddingBottom: 4 }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 0, overflowX: 'auto', paddingBottom: 4 }}>
         {[
-          { key: 'all',      label: 'Todos' },
           { key: 'open',     label: 'Abiertos' },
           { key: 'closed',   label: 'Por jugar' },
           { key: 'played',   label: 'Jugados' },
+          { key: 'all',      label: 'Todos' },
           { key: 'mispicks', label: '🧾 Mis Picks' },
         ].map(f => (
           <button
             key={f.key}
-            onClick={() => setFilter(f.key)}
+            onClick={() => { setFilter(f.key); setOpenDay(null); }}
             style={{
               padding: '5px 14px',
               borderRadius: 20,
@@ -720,33 +721,50 @@ const MatchesPage = () => {
         ))}
       </div>
 
-      {/* Vista "Mis Picks" — reutiliza userPredictions, sin query extra */}
-      {filter === 'mispicks' && (
-        <>
-          {userPredictions.length === 0 && (
-            <div className="text-center text-muted" style={{ marginTop: 40 }}>
-              Aún no has guardado ninguna predicción
-            </div>
-          )}
-          {userPredictions.length > 0 && (
-            <>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center' }}>
-                {userPredictions.length} predicción{userPredictions.length !== 1 ? 'es' : ''} guardada{userPredictions.length !== 1 ? 's' : ''}
-              </div>
-              {userPredictions
-                .map(pred => ({ pred, match: matches.find(m => m.id === pred.matchId) }))
-                .filter(({ match }) => !!match)
-                .sort((a, b) => (a.match.date > b.match.date ? 1 : -1))
-                .map(({ pred, match }) => (
-                  <MyPickCard key={pred.id} pred={pred} match={match} />
-                ))
-              }
-            </>
-          )}
-        </>
-      )}
+      {/* Descripción del filtro activo */}
+      {(() => {
+        const desc = {
+          open:     'Partidos disponibles para ingresar o modificar tu predicción.',
+          closed:   'Partidos próximos cuyo plazo de predicción aún no ha abierto.',
+          played:   'Partidos ya disputados — ve cuántos puntos obtuviste.',
+          all:      'Todos los partidos del torneo, sin importar su estado.',
+          mispicks: 'Registro de todas tus predicciones guardadas con fecha y hora.',
+        }[filter];
+        return desc ? (
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: 12, marginTop: 6, paddingLeft: 2 }}>
+            {desc}
+          </div>
+        ) : null;
+      })()}
 
-      {/* Vista normal de partidos */}
+      {/* Vista "Mis Picks" — reutiliza userPredictions, sin query extra */}
+      {filter === 'mispicks' && (() => {
+        const validPicks = userPredictions
+          .map(pred => ({ pred, match: matches.find(m => m.id === pred.matchId) }))
+          .filter(({ match }) => !!match)
+          .sort((a, b) => (a.match.date > b.match.date ? 1 : -1));
+        return (
+          <>
+            {validPicks.length === 0 && (
+              <div className="text-center text-muted" style={{ marginTop: 40 }}>
+                Aún no has guardado ninguna predicción
+              </div>
+            )}
+            {validPicks.length > 0 && (
+              <>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center' }}>
+                  {validPicks.length} predicción{validPicks.length !== 1 ? 'es' : ''} guardada{validPicks.length !== 1 ? 's' : ''}
+                </div>
+                {validPicks.map(({ pred, match }) => (
+                  <MyPickCard key={pred.id} pred={pred} match={match} />
+                ))}
+              </>
+            )}
+          </>
+        );
+      })()}
+
+      {/* Vista normal de partidos — acordeón por fecha */}
       {filter !== 'mispicks' && (
         <>
           {loading && <div className="page-loading"><div className="spinner" /></div>}
@@ -755,20 +773,64 @@ const MatchesPage = () => {
               No hay partidos disponibles aún
             </div>
           )}
-          {Object.entries(grouped).map(([phase, phaseMatches]) => (
-            <div key={phase}>
-              <div className="section-label">{PHASE_LABELS[phase] || phase}</div>
-              {phaseMatches.map(match => (
-                <MatchCard
-                  key={match.id}
-                  match={match}
-                  userId={user?.uid}
-                  allUsers={allUsers}
-                  userPrediction={userPredictions.find(p => p.matchId === match.id) || null}
-                />
-              ))}
-            </div>
-          ))}
+          {!loading && Object.entries(grouped).map(([day, dayMatches], idx) => {
+            const isOpen = openDay !== null ? openDay === day : idx === 0;
+            const fmtDay = (d) => {
+              try {
+                return new Date(d + 'T12:00:00').toLocaleDateString('es-CR', {
+                  weekday: 'long', day: 'numeric', month: 'long',
+                });
+              } catch { return d; }
+            };
+            return (
+              <div key={day} style={{ marginBottom: 6 }}>
+                {/* Cabecera */}
+                <div
+                  onClick={() => setOpenDay(isOpen ? '__none__' : day)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '9px 12px',
+                    background: isOpen ? 'var(--navy)' : '#f1f5f9',
+                    borderRadius: isOpen ? '8px 8px 0 0' : 8,
+                    cursor: 'pointer', userSelect: 'none',
+                  }}
+                >
+                  <div>
+                    <span style={{
+                      fontSize: 13, fontWeight: 600, textTransform: 'capitalize',
+                      color: isOpen ? '#fff' : 'var(--navy)',
+                    }}>
+                      {fmtDay(day)}
+                    </span>
+                    <span style={{
+                      fontSize: 11, marginLeft: 8,
+                      color: isOpen ? 'rgba(255,255,255,0.5)' : 'var(--text-muted)',
+                    }}>
+                      {dayMatches.length} partido{dayMatches.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 12, color: isOpen ? 'var(--gold-light)' : 'var(--text-muted)' }}>
+                    {isOpen ? '▲' : '▼'}
+                  </span>
+                </div>
+
+                {/* Partidos del día */}
+                {isOpen && (
+                  <div style={{ border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: '8px 0 4px' }}>
+                    {dayMatches.map(match => (
+                      <MatchCard
+                        key={match.id}
+                        match={match}
+                        userId={user?.uid}
+                        allUsers={allUsers}
+                        userPrediction={userPredictions.find(p => p.matchId === match.id) || null}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </>
       )}
     </div>
