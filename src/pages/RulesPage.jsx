@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 // ─────────────────────────────────────────────────────────────────────────────
 //  Componente: tarjeta de puntos (3 pts, 5 pts, 1 pto)
 // ─────────────────────────────────────────────────────────────────────────────
-const PuntosCard = ({ pts, label, icon, descripcion, destacado }) => (
+const PuntosCard = ({ pts, label, descripcion, destacado }) => (
   <div style={{
     display: 'flex',
     alignItems: 'center',
@@ -37,17 +37,6 @@ const PuntosCard = ({ pts, label, icon, descripcion, destacado }) => (
       }}>
         {pts === 1 ? 'punto' : 'puntos'}
       </span>
-    </div>
-
-    {/* Ícono circular */}
-    <div style={{
-      width: 44, height: 44,
-      borderRadius: '50%',
-      background: 'var(--navy)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 22, flexShrink: 0,
-    }}>
-      {icon}
     </div>
 
     {/* Texto */}
@@ -163,7 +152,6 @@ const RulesPage = () => {
 
       <PuntosCard
         pts={3}
-        icon="⚽"
         label="Resultado del partido"
         descripcion="Acertar el equipo ganador o empate otorga"
         destacado="3 puntos."
@@ -174,7 +162,6 @@ const RulesPage = () => {
 
       <PuntosCard
         pts={5}
-        icon="🥅"
         label="Marcador exacto"
         descripcion="Se podrá predecir el marcador final del partido. Cada acierto otorga"
         destacado="5 puntos."
@@ -185,7 +172,6 @@ const RulesPage = () => {
 
       <PuntosCard
         pts={1}
-        icon="👥"
         label="Equipos que avanzan de Fase de Grupos"
         descripcion="Antes del inicio del torneo, cada jugador deberá seleccionar los dos equipos que avanzan por grupo (sin importar el orden). Cada acierto otorga"
         destacado="1 punto."
