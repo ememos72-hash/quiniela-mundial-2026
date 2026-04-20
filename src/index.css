@@ -250,47 +250,124 @@ h1, h2, h3, h4 {
 .pred-btn.sel-draw { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
 .pred-btn.sel-b { background: #fce7f3; border-color: #ec4899; color: #9d174d; }
 
-/* Score input for exact score */
-.exact-score-section {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border);
+/* ── Marcador exacto · Steppers ─────────────────────────────── */
+.score-stepper-section {
+  margin-top: 12px;
+  padding: 12px 14px 16px;
+  background: var(--navy);
+  border-radius: 10px;
 }
 
-.exact-score-label {
-  font-size: 11px;
+.score-stepper-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.score-pts-pill {
+  background: rgba(201,149,10,0.18);
+  border: 1.5px solid var(--gold);
+  border-radius: 20px;
+  padding: 2px 9px;
+  font-size: 10px;
+  font-weight: 700;
   color: var(--gold);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  letter-spacing: 0.5px;
 }
 
-.exact-score-inputs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.score-stepper-title {
+  font-size: 12px;
+  color: rgba(255,255,255,0.8);
+  font-weight: 600;
 }
 
-.score-input {
-  width: 48px;
-  height: 40px;
+.score-stepper-required {
+  margin-left: auto;
+  font-size: 10px;
+  color: #f87171;
+  font-weight: 600;
+}
+
+.score-stepper-ready {
+  margin-left: auto;
+  font-size: 10px;
+  color: rgba(201,149,10,0.85);
+  font-weight: 600;
+}
+
+.score-steppers-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.score-stepper-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.score-stepper-team {
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
   text-align: center;
-  font-size: 18px;
-  font-weight: 500;
-  font-family: 'Bebas Neue', sans-serif;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-  color: var(--text);
-  outline: none;
+  max-width: 90px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.score-input:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,149,10,0.15); }
-.score-dash { font-size: 20px; color: var(--text-muted); }
+.score-stepper-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.score-step-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  border: 1.5px solid var(--gold);
+  color: var(--gold);
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s;
+  line-height: 1;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.score-step-btn:active { background: rgba(201,149,10,0.2); }
+
+.score-step-num {
+  font-size: 52px;
+  font-weight: 700;
+  color: #fff;
+  min-width: 46px;
+  text-align: center;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  font-family: 'Bebas Neue', sans-serif;
+}
+
+.score-step-num.empty {
+  color: rgba(255,255,255,0.18);
+  font-size: 42px;
+}
+
+.score-stepper-dash {
+  font-size: 28px;
+  font-weight: 700;
+  color: rgba(201,149,10,0.3);
+  margin-top: 22px;
+  font-family: 'Bebas Neue', sans-serif;
+}
 
 /* My prediction result */
 .pred-result {

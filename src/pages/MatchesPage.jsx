@@ -335,8 +335,8 @@ const MatchCountdown = ({ date }) => {
 const MatchCard = ({ match, userId, allUsers, userPrediction }) => {
   const [prediction, setPrediction] = useState(null);
   const [localPred, setLocalPred]   = useState(null);
-  const [scoreA, setScoreA]         = useState('');
-  const [scoreB, setScoreB]         = useState('');
+  const [scoreA, setScoreA]         = useState(null);
+  const [scoreB, setScoreB]         = useState(null);
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
   const [showPicks, setShowPicks]       = useState(false);
@@ -350,8 +350,8 @@ const MatchCard = ({ match, userId, allUsers, userPrediction }) => {
     if (!userPrediction) return;
     setPrediction(userPrediction);
     setLocalPred(userPrediction.result);
-    if (userPrediction.teamAScore !== undefined) setScoreA(String(userPrediction.teamAScore));
-    if (userPrediction.teamBScore !== undefined) setScoreB(String(userPrediction.teamBScore));
+    if (userPrediction.teamAScore !== undefined) setScoreA(userPrediction.teamAScore);
+    if (userPrediction.teamBScore !== undefined) setScoreB(userPrediction.teamBScore);
   }, [userPrediction?.updatedAt, userPrediction?.matchId]);
 
   const savePrediction = async () => {
@@ -368,9 +368,9 @@ const MatchCard = ({ match, userId, allUsers, userPrediction }) => {
         updatedAt: now,
         changeCount: isUpdate ? (prediction.changeCount || 0) + 1 : 0,
       };
-      if (allowExactScore && scoreA !== '' && scoreB !== '') {
-        data.teamAScore = parseInt(scoreA);
-        data.teamBScore = parseInt(scoreB);
+      if (allowExactScore && scoreA !== null && scoreB !== null) {
+        data.teamAScore = scoreA;
+        data.teamBScore = scoreB;
       }
       const ref = doc(db, 'predictions', `${userId}_${match.id}`);
       await setDoc(ref, data);
@@ -462,32 +462,72 @@ const MatchCard = ({ match, userId, allUsers, userPrediction }) => {
             </button>
           </div>
 
-          {allowExactScore && localPred && (
-            <div className="exact-score-section">
-              <div className="exact-score-label">⭐ Marcador exacto +5 pts</div>
-              <div className="exact-score-inputs">
-                <input
-                  className="score-input"
-                  type="number"
-                  min="0"
-                  max="20"
-                  value={scoreA}
-                  onChange={e => setScoreA(e.target.value)}
-                  placeholder="0"
-                />
-                <span className="score-dash">-</span>
-                <input
-                  className="score-input"
-                  type="number"
-                  min="0"
-                  max="20"
-                  value={scoreB}
-                  onChange={e => setScoreB(e.target.value)}
-                  placeholder="0"
-                />
-                <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 4 }}>
-                  (opcional)
-                </span>
+          {/* ── Marcador exacto: steppers obligatorios para fases knockout ── */}
+          {allowExactScore && (
+            <div className="score-stepper-section">
+              <div className="score-stepper-header">
+                <span className="score-pts-pill">+5 pts</span>
+                <span className="score-stepper-title">Marcador exacto</span>
+                {(scoreA === null || scoreB === null)
+                  ? <span className="score-stepper-required">* obligatorio</span>
+                  : <span className="score-stepper-ready">✓ listo</span>
+                }
+              </div>
+
+              <div className="score-steppers-wrap">
+                {/* Equipo A */}
+                <div className="score-stepper-col">
+                  <span className="score-stepper-team">{match.teamA}</span>
+                  <div className="score-stepper-controls">
+                    <button className="score-step-btn" onClick={() => {
+                      const next = Math.max(0, (scoreA ?? 0) - 1);
+                      setScoreA(next);
+                      const b = scoreB ?? 0;
+                      if (next > b) setLocalPred('teamA');
+                      else if (next < b) setLocalPred('teamB');
+                      else setLocalPred('draw');
+                    }}>−</button>
+                    <span className={`score-step-num ${scoreA === null ? 'empty' : ''}`}>
+                      {scoreA !== null ? scoreA : '–'}
+                    </span>
+                    <button className="score-step-btn" onClick={() => {
+                      const next = (scoreA ?? 0) + 1;
+                      setScoreA(next);
+                      const b = scoreB ?? 0;
+                      if (next > b) setLocalPred('teamA');
+                      else if (next < b) setLocalPred('teamB');
+                      else setLocalPred('draw');
+                    }}>+</button>
+                  </div>
+                </div>
+
+                <span className="score-stepper-dash">–</span>
+
+                {/* Equipo B */}
+                <div className="score-stepper-col">
+                  <span className="score-stepper-team">{match.teamB}</span>
+                  <div className="score-stepper-controls">
+                    <button className="score-step-btn" onClick={() => {
+                      const next = Math.max(0, (scoreB ?? 0) - 1);
+                      setScoreB(next);
+                      const a = scoreA ?? 0;
+                      if (a > next) setLocalPred('teamA');
+                      else if (a < next) setLocalPred('teamB');
+                      else setLocalPred('draw');
+                    }}>−</button>
+                    <span className={`score-step-num ${scoreB === null ? 'empty' : ''}`}>
+                      {scoreB !== null ? scoreB : '–'}
+                    </span>
+                    <button className="score-step-btn" onClick={() => {
+                      const next = (scoreB ?? 0) + 1;
+                      setScoreB(next);
+                      const a = scoreA ?? 0;
+                      if (a > next) setLocalPred('teamA');
+                      else if (a < next) setLocalPred('teamB');
+                      else setLocalPred('draw');
+                    }}>+</button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -495,9 +535,18 @@ const MatchCard = ({ match, userId, allUsers, userPrediction }) => {
           <button
             className="save-btn"
             onClick={savePrediction}
-            disabled={!localPred || saving}
+            disabled={!localPred || saving || (allowExactScore && (scoreA === null || scoreB === null))}
           >
-            {saved ? '✓ Guardado' : saving ? 'Guardando...' : prediction ? 'Actualizar predicción' : 'Guardar predicción'}
+            {saved
+              ? '✓ Guardado'
+              : saving
+                ? 'Guardando...'
+                : allowExactScore && (scoreA === null || scoreB === null)
+                  ? 'Ingresa el marcador para guardar'
+                  : prediction
+                    ? (allowExactScore ? 'Actualizar marcador' : 'Actualizar predicción')
+                    : (allowExactScore ? 'Guardar marcador' : 'Guardar predicción')
+            }
           </button>
 
           {predTimestamp && (
