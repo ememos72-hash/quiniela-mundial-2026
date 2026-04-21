@@ -331,10 +331,19 @@ const FlashPage = () => {
         display: 'flex', alignItems: 'center', gap: 14,
       }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)', lineHeight: 1.65 }}>
-            La <span style={{ color: 'var(--gold-light)', fontWeight: 600 }}>Quiniela Flash</span> se desarrolla durante un período específico definido por el administrador (por ejemplo, una jornada completa).{' '}
-            Se aplican las mismas reglas de puntuación.{' '}
-            Al finalizar el período, se definirá uno o varios ganadores para esa etapa.
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)', lineHeight: 1.7 }}>
+            <p style={{ margin: '0 0 10px' }}>
+              La <span style={{ color: 'var(--gold-light)', fontWeight: 600 }}>Quiniela Flash</span> se desarrolla durante un período específico definido por el administrador (por ejemplo, semana #1, semana #3 o una fase del torneo como dieciseisavos).
+            </p>
+            <p style={{ margin: '0 0 10px' }}>
+              Se aplican las mismas reglas de puntuación.
+            </p>
+            <p style={{ margin: '0 0 10px' }}>
+              Al finalizar el período, se definirán uno o varios ganadores para esa etapa.
+            </p>
+            <p style={{ margin: 0 }}>
+              Además, podrán existir premios sorpresa, no solo para los primeros lugares, sino también para otros participantes, haciendo cada Quiniela Flash aún más entretenida.
+            </p>
           </div>
         </div>
         <div style={{ fontSize: 48, opacity: 0.2, flexShrink: 0, lineHeight: 1, transform: 'rotate(15deg)' }}>
@@ -356,9 +365,10 @@ const FlashPage = () => {
         }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>⚡</div>
           <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, color: 'var(--text-muted)' }}>
-            Sin quiniela flash activa
+            Sin Quiniela Flash Activa
           </div>
-          <div className="text-muted mt-4" style={{ fontSize: 13 }}>El admin activara una pronto</div>
+          <div className="text-muted mt-4" style={{ fontSize: 13 }}>Muy pronto se activará una nueva Quiniela Flash.</div>
+          <div className="text-muted" style={{ fontSize: 13, marginTop: 4 }}>Prepárate.</div>
         </div>
       )}
 

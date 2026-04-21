@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import MundialFormatoModal from '../components/MundialFormatoModal';
 import GroupPicksModal from '../components/GroupPicksModal';
@@ -113,12 +113,13 @@ const SectionHeader = ({ icon, title }) => (
 //  Página principal
 // ─────────────────────────────────────────────────────────────────────────────
 const RulesPage = () => {
-  const { user, isAdmin, logout } = useAuth();
+  const { user, userProfile, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const [showFormato, setShowFormato] = useState(false);
   const [showGroupPicks, setShowGroupPicks] = useState(false);
   const [showGroupRanking, setShowGroupRanking] = useState(false);
   const [groupPicksOpen, setGroupPicksOpen] = useState(false);
+  const [userRank, setUserRank] = useState(null);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'config', 'groupPicks'), snap => {
@@ -126,6 +127,18 @@ const RulesPage = () => {
     });
     return unsub;
   }, []);
+
+  // Calcular puesto del usuario en el ranking
+  useEffect(() => {
+    if (!user || !userProfile) return;
+    const calcRank = async () => {
+      const snap = await getDocs(collection(db, 'users'));
+      const pts = userProfile.totalPoints || 0;
+      const above = snap.docs.filter(d => (d.data().totalPoints || 0) > pts).length;
+      setUserRank(above + 1);
+    };
+    calcRank();
+  }, [user, userProfile?.totalPoints]);
 
   const handleLogout = async () => {
     await logout();
@@ -135,53 +148,76 @@ const RulesPage = () => {
   return (
     <div className="page">
 
-      {/* ── Perfil de usuario (solo si está logueado) ── */}
+      {/* ── Perfil de usuario ── */}
       {user && (
         <div style={{
-          borderRadius: 'var(--radius)',
-          marginBottom: 20,
-          border: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', gap: 12,
+          marginBottom: 16,
+          padding: '10px 14px',
           background: '#fff',
-          overflow: 'hidden',
+          border: '1px solid var(--border)',
+          borderRadius: 14,
           boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
         }}>
-          {/* franja superior dorada */}
-          <div style={{ height: 4, background: 'linear-gradient(90deg, var(--navy), var(--gold))' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px' }}>
-            {/* avatar grande con inicial */}
+          {/* Nombre + email */}
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
-              width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
-              background: 'var(--navy)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: 22, color: 'var(--gold-light)', letterSpacing: '0.04em',
+              fontSize: 13, fontWeight: 700, color: 'var(--navy)',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
-              {user?.displayName?.charAt(0)?.toUpperCase() || '?'}
+              {user?.displayName}
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
-                fontFamily: "'Bebas Neue', sans-serif",
-                fontSize: 18, letterSpacing: '0.04em',
-                color: 'var(--navy)', lineHeight: 1.1,
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-              }}>
-                {user?.displayName}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                {user?.email}
-              </div>
+            <div style={{
+              fontSize: 11, color: 'var(--text-muted)', marginTop: 1,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>
+              {user?.email}
             </div>
-            {isAdmin && (
-              <span style={{
-                fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                background: 'var(--gold)', color: 'var(--navy)',
-                borderRadius: 20, padding: '3px 10px', flexShrink: 0,
-              }}>
-                Admin
-              </span>
-            )}
           </div>
+
+          {/* Badge ranking */}
+          {userRank && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              background: '#e0f2fe', borderRadius: 20,
+              padding: '4px 10px', flexShrink: 0,
+            }}>
+              <span style={{ fontSize: 13 }}>🏅</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#0369a1' }}>
+                #{userRank} Ranking
+              </span>
+            </div>
+          )}
+
+          {/* Puntos */}
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <div style={{
+              fontFamily: "'Bebas Neue', sans-serif",
+              fontSize: 17, color: 'var(--navy)', lineHeight: 1,
+              letterSpacing: '0.02em',
+            }}>
+              {userProfile?.totalPoints ?? 0}
+              <span style={{ fontSize: 11, marginLeft: 2 }}>pts</span>
+            </div>
+            <div style={{
+              fontSize: 9, color: 'var(--text-muted)',
+              textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 1,
+            }}>
+              Puntos totales
+            </div>
+          </div>
+
+          {/* Badge admin */}
+          {isAdmin && (
+            <span style={{
+              fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              background: 'var(--gold)', color: 'var(--navy)',
+              borderRadius: 20, padding: '3px 8px', flexShrink: 0,
+            }}>
+              Admin
+            </span>
+          )}
         </div>
       )}
 
@@ -292,43 +328,55 @@ const RulesPage = () => {
             Criterio de desempate
           </div>
           <div style={{ fontSize: 13, color: 'var(--text-mid)', lineHeight: 1.6, marginBottom: 6 }}>
-            En caso de empate en el puntaje total, se utilizarán como criterio de desempate los puntos obtenidos por la selección de equipos que avanzan de la fase de grupos.
+            Si al finalizar la quiniela existe igualdad en el puntaje total entre dos o más jugadores, se utilizarán como criterio de desempate los aciertos obtenidos en la predicción de los equipos que avanzan de la fase de grupos.
           </div>
           <div style={{ fontSize: 13, color: 'var(--gold)', fontWeight: 600, lineHeight: 1.5 }}>
-            Ganará quien haya acertado mayor cantidad de equipos clasificados.
+            Será ganador quien registre la mayor cantidad de aciertos en esta etapa.
           </div>
 
-          {/* Botones de pronóstico y ranking — el ranking siempre visible */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-            {groupPicksOpen && user && (
-              <button
-                onClick={() => setShowGroupPicks(true)}
-                style={{
-                  flex: 1, padding: '10px 0',
-                  background: 'var(--gold)', color: 'var(--navy)',
-                  border: 'none', borderRadius: 10,
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: 15, letterSpacing: '0.04em',
-                  cursor: 'pointer',
-                }}
-              >
-                ✏️ Enviar mi pronóstico
-              </button>
-            )}
+          {/* Recuadro para enviar pronóstico — solo visible cuando el admin lo activa */}
+          {groupPicksOpen && user && (
             <button
-              onClick={() => setShowGroupRanking(true)}
+              onClick={() => setShowGroupPicks(true)}
               style={{
-                flex: 1, padding: '10px 0',
-                background: 'transparent', color: 'var(--navy)',
-                border: '1px solid var(--border)', borderRadius: 10,
-                fontFamily: "'Bebas Neue', sans-serif",
-                fontSize: 15, letterSpacing: '0.04em',
+                width: '100%',
+                background: 'var(--navy)',
+                border: '1px solid rgba(212,175,55,0.3)',
+                borderRadius: 'var(--radius)',
+                padding: '14px 16px',
+                marginTop: 14,
                 cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                textAlign: 'left',
               }}
             >
-              🏆 Ver pronósticos
+              <div style={{
+                width: 44, height: 44, flexShrink: 0,
+                borderRadius: '50%',
+                background: 'rgba(212,175,55,0.15)',
+                border: '1.5px solid var(--gold)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 22,
+              }}>
+                🏟️
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  fontFamily: "'Bebas Neue', sans-serif",
+                  fontSize: 15, letterSpacing: '0.06em',
+                  color: '#fff', marginBottom: 3,
+                }}>
+                  Enviar Selecciones que Avanzan
+                </div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.4 }}>
+                  Selecciona los 2 clasificados por grupo · 1 punto por acierto
+                </div>
+              </div>
+              <div style={{ fontSize: 16, color: 'var(--gold-light)', flexShrink: 0 }}>›</div>
             </button>
-          </div>
+          )}
         </div>
       </div>
 
@@ -382,24 +430,6 @@ const RulesPage = () => {
         </button>
       )}
 
-      {/* ── Cerrar sesión (solo si está logueado) ── */}
-      {user && (
-        <button
-          onClick={handleLogout}
-          style={{
-            width: '100%', padding: 12,
-            background: 'transparent',
-            color: 'var(--text-mid)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-sm)',
-            fontFamily: "'DM Sans', sans-serif",
-            fontSize: 14,
-            cursor: 'pointer',
-          }}
-        >
-          Cerrar sesión
-        </button>
-      )}
 
     </div>
   );

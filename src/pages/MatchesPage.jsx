@@ -754,43 +754,23 @@ const MatchesPage = () => {
         </div>
       </div>
 
-      {/* Botones de pronóstico de grupos */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-        {groupPicksOpen && (
-          <button
-            onClick={() => setShowGroupPicks(true)}
-            style={{
-              flex: 1, padding: '9px 0',
-              background: 'var(--gold)', color: 'var(--navy)',
-              border: 'none', borderRadius: 10,
-              fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: 14, letterSpacing: '0.04em',
-              cursor: 'pointer',
-            }}
-          >
-            🏟️ Pronostico grupos
-          </button>
-        )}
+      {/* Botón de desempate de grupos */}
+      <div style={{ marginBottom: 14, textAlign: 'right' }}>
         <button
           onClick={() => setShowGroupRanking(true)}
           style={{
-            flex: groupPicksOpen ? 1 : undefined,
-            padding: '9px 14px',
-            background: 'transparent', color: 'var(--navy)',
-            border: '1px solid var(--border)', borderRadius: 10,
-            fontFamily: "'Bebas Neue', sans-serif",
-            fontSize: 14, letterSpacing: '0.04em',
+            padding: '8px 16px',
+            background: 'transparent', color: 'var(--text-muted)',
+            border: '1px solid var(--border)', borderRadius: 20,
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 11, fontWeight: 600,
             cursor: 'pointer',
-            width: groupPicksOpen ? undefined : '100%',
           }}
         >
-          🏆 Ranking grupos
+          Ver Clasificados Para Desempate
         </button>
       </div>
 
-      {showGroupPicks && user && (
-        <GroupPicksModal userId={user.uid} onClose={() => setShowGroupPicks(false)} />
-      )}
       {showGroupRanking && (
         <GroupRankingModal currentUserId={user?.uid} onClose={() => setShowGroupRanking(false)} />
       )}

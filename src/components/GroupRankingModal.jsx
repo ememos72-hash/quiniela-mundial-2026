@@ -101,17 +101,18 @@ const GroupRankingModal = ({ currentUserId, onClose }) => {
         position: 'fixed', inset: 0,
         background: 'rgba(0,0,0,0.6)',
         zIndex: 1000,
-        display: 'flex', alignItems: 'flex-end',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
         backdropFilter: 'blur(2px)',
+        padding: '16px',
       }}
     >
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 480, margin: '0 auto',
+          width: '100%', maxWidth: 480,
           background: '#fff',
-          borderRadius: '20px 20px 0 0',
-          maxHeight: '92vh',
+          borderRadius: 20,
+          maxHeight: '90vh',
           overflowY: 'auto',
           paddingBottom: 32,
         }}

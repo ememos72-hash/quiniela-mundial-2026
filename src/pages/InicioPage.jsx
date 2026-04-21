@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import GroupPicksModal from '../components/GroupPicksModal';
 
 // =============================================================================
 //  PÁGINA DE INICIO — La Quiniela · Mundial 2026
@@ -150,7 +149,6 @@ const InicioPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [groupPicksOpen, setGroupPicksOpen] = useState(false);
-  const [showGroupPicks, setShowGroupPicks] = useState(false);
 
   // Escuchar si el admin abrió los pronósticos de grupos
   useEffect(() => {
@@ -252,7 +250,7 @@ const InicioPage = () => {
       {/* ── Banner: Pronóstico de grupos (solo cuando está abierto) ── */}
       {groupPicksOpen && user && (
         <div
-          onClick={() => setShowGroupPicks(true)}
+          onClick={() => navigate('/info')}
           style={{
             background: 'var(--navy)',
             border: '1px solid rgba(212,175,55,0.35)',
@@ -279,18 +277,14 @@ const InicioPage = () => {
               fontSize: 15, letterSpacing: '0.06em',
               color: '#fff', marginBottom: 3,
             }}>
-              ¡Ya puedes enviar tu pronóstico de grupos!
+              ¿Tienes claro quién pasa de grupos?
             </div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.4 }}>
-              Selecciona los 2 equipos que avanzan por grupo · 1 punto por acierto
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
+              Ve a la sección <span style={{ color: 'var(--gold-light)', fontWeight: 600 }}>Info</span>, busca el apartado <span style={{ color: 'var(--gold-light)', fontWeight: 600 }}>Criterio de desempate</span> y define tus clasificados.
             </div>
           </div>
           <div style={{ fontSize: 16, color: 'var(--gold-light)', flexShrink: 0 }}>›</div>
         </div>
-      )}
-
-      {showGroupPicks && user && (
-        <GroupPicksModal userId={user.uid} onClose={() => setShowGroupPicks(false)} />
       )}
 
       {/* ── Anuncios ── */}
