@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
+import GroupPicksModal from '../components/GroupPicksModal';
 
 // =============================================================================
 //  PÁGINA DE INICIO — La Quiniela · Mundial 2026
@@ -146,6 +149,16 @@ const TIPO_CONFIG = {
 const InicioPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [groupPicksOpen, setGroupPicksOpen] = useState(false);
+  const [showGroupPicks, setShowGroupPicks] = useState(false);
+
+  // Escuchar si el admin abrió los pronósticos de grupos
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'config', 'groupPicks'), snap => {
+      setGroupPicksOpen(snap.exists() ? (snap.data().groupPicksOpen === true) : false);
+    });
+    return unsub;
+  }, []);
 
   return (
     <div className="page">
@@ -235,6 +248,50 @@ const InicioPage = () => {
         )}
 
       </div>
+
+      {/* ── Banner: Pronóstico de grupos (solo cuando está abierto) ── */}
+      {groupPicksOpen && user && (
+        <div
+          onClick={() => setShowGroupPicks(true)}
+          style={{
+            background: 'var(--navy)',
+            border: '1px solid rgba(212,175,55,0.35)',
+            borderRadius: 'var(--radius)',
+            padding: '14px 16px',
+            marginBottom: 16,
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 14,
+          }}
+        >
+          <div style={{
+            width: 44, height: 44, flexShrink: 0,
+            borderRadius: '50%',
+            background: 'rgba(212,175,55,0.15)',
+            border: '1.5px solid var(--gold)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 22,
+          }}>
+            🏟️
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontFamily: "'Bebas Neue', sans-serif",
+              fontSize: 15, letterSpacing: '0.06em',
+              color: '#fff', marginBottom: 3,
+            }}>
+              ¡Ya puedes enviar tu pronóstico de grupos!
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.4 }}>
+              Selecciona los 2 equipos que avanzan por grupo · 1 punto por acierto
+            </div>
+          </div>
+          <div style={{ fontSize: 16, color: 'var(--gold-light)', flexShrink: 0 }}>›</div>
+        </div>
+      )}
+
+      {showGroupPicks && user && (
+        <GroupPicksModal userId={user.uid} onClose={() => setShowGroupPicks(false)} />
+      )}
 
       {/* ── Anuncios ── */}
       {ANUNCIOS.length > 0 && (

@@ -684,6 +684,76 @@ const SlideEditor = ({ slide, index, total, onChange, onDelete }) => {
   );
 };
 
+// --- Group Picks Toggle ---
+const GroupPicksToggle = () => {
+  const [open,   setOpen]   = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'config', 'groupPicks'), snap => {
+      if (snap.exists()) {
+        setOpen(snap.data().groupPicksOpen === true);
+      } else {
+        setOpen(false);
+      }
+      setLoaded(true);
+    });
+    return unsub;
+  }, []);
+
+  const toggle = async () => {
+    setSaving(true);
+    const newVal = !open;
+    await setDoc(doc(db, 'config', 'groupPicks'), { groupPicksOpen: newVal }, { merge: true });
+    setOpen(newVal);
+    setSaving(false);
+  };
+
+  if (!loaded) return null;
+
+  return (
+    <div className="admin-section" style={{ marginBottom: 16 }}>
+      <div className="admin-section-title">🏟️ Pronóstico de Grupos</div>
+      <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>
+        Cuando está activo, los jugadores ven el banner para enviar su pronóstico de equipos que avanzan por grupo (1 punto por acierto, criterio de desempate).
+      </div>
+      <div
+        onClick={saving ? undefined : toggle}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '14px 16px',
+          background: open ? 'rgba(21,128,61,0.08)' : '#f8fafc',
+          border: `2px solid ${open ? '#15803d' : 'var(--border)'}`,
+          borderRadius: 10, cursor: saving ? 'default' : 'pointer',
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: open ? '#15803d' : 'var(--text-mid)' }}>
+            {open ? '🟢 Pronóstico de grupos abierto' : '⚫ Pronóstico de grupos cerrado'}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+            {open ? 'Los jugadores pueden enviar sus pronósticos' : 'No visible para los jugadores'}
+          </div>
+        </div>
+        <div style={{
+          width: 44, height: 24, borderRadius: 12,
+          background: open ? '#15803d' : '#cbd5e1',
+          position: 'relative', transition: 'background 0.2s',
+          opacity: saving ? 0.6 : 1,
+        }}>
+          <div style={{
+            position: 'absolute', top: 2, left: open ? 22 : 2,
+            width: 20, height: 20, borderRadius: '50%',
+            background: '#fff', transition: 'left 0.2s',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+          }} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Ranking Visibility Toggle ---
 const RankingToggle = () => {
   const [visible, setVisible] = useState(true);
@@ -878,6 +948,15 @@ const JugadoresTab = () => {
     await setDoc(doc(db, 'users', u.id), { isPaid: !u.isPaid }, { merge: true });
   };
 
+  const resetGroupPicks = async (u) => {
+    if (!window.confirm(`¿Borrar el pronóstico de grupos de ${u.displayName || u.email}?\n\nEl jugador podrá volver a llenarlo si "Pronóstico de grupos" está activo.`)) return;
+    try {
+      await deleteDoc(doc(db, 'groupPredictions', u.id));
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  };
+
   const deleteUser = async (u) => {
     const confirmMsg =
       `¿Eliminar a ${u.displayName || u.email}?\n\n` +
@@ -988,6 +1067,19 @@ const JugadoresTab = () => {
                   {u.isPaid ? 'Activo' : 'Pendiente'}
                 </span>
               </div>
+              <button
+                onClick={() => resetGroupPicks(u)}
+                title="Borrar pronóstico de grupos"
+                style={{
+                  background: '#fef3c7', border: 'none',
+                  borderRadius: 20, padding: '3px 10px',
+                  cursor: 'pointer', fontSize: 12,
+                  color: '#92400e', fontWeight: 600,
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
+                🔄 Reset grupos
+              </button>
               <button
                 onClick={() => deleteUser(u)}
                 title="Eliminar jugador"
@@ -1556,6 +1648,7 @@ const AdminPage = () => {
         {tab === 'jugadores' && <JugadoresTab />}
         {tab === 'anuncios' && (
           <>
+            <GroupPicksToggle />
             <RankingToggle />
             <AnuncioForm />
           </>

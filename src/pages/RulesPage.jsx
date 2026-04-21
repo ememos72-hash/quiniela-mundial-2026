@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
 import MundialFormatoModal from '../components/MundialFormatoModal';
+import GroupPicksModal from '../components/GroupPicksModal';
+import GroupRankingModal from '../components/GroupRankingModal';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Componente: tarjeta de puntos (3 pts, 5 pts, 1 pto)
@@ -112,6 +116,16 @@ const RulesPage = () => {
   const { user, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const [showFormato, setShowFormato] = useState(false);
+  const [showGroupPicks, setShowGroupPicks] = useState(false);
+  const [showGroupRanking, setShowGroupRanking] = useState(false);
+  const [groupPicksOpen, setGroupPicksOpen] = useState(false);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'config', 'groupPicks'), snap => {
+      setGroupPicksOpen(snap.exists() ? (snap.data().groupPicksOpen === true) : false);
+    });
+    return unsub;
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -283,9 +297,47 @@ const RulesPage = () => {
           <div style={{ fontSize: 13, color: 'var(--gold)', fontWeight: 600, lineHeight: 1.5 }}>
             Ganará quien haya acertado mayor cantidad de equipos clasificados.
           </div>
+
+          {/* Botones de pronóstico y ranking — el ranking siempre visible */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+            {groupPicksOpen && user && (
+              <button
+                onClick={() => setShowGroupPicks(true)}
+                style={{
+                  flex: 1, padding: '10px 0',
+                  background: 'var(--gold)', color: 'var(--navy)',
+                  border: 'none', borderRadius: 10,
+                  fontFamily: "'Bebas Neue', sans-serif",
+                  fontSize: 15, letterSpacing: '0.04em',
+                  cursor: 'pointer',
+                }}
+              >
+                ✏️ Enviar mi pronóstico
+              </button>
+            )}
+            <button
+              onClick={() => setShowGroupRanking(true)}
+              style={{
+                flex: 1, padding: '10px 0',
+                background: 'transparent', color: 'var(--navy)',
+                border: '1px solid var(--border)', borderRadius: 10,
+                fontFamily: "'Bebas Neue', sans-serif",
+                fontSize: 15, letterSpacing: '0.04em',
+                cursor: 'pointer',
+              }}
+            >
+              🏆 Ver pronósticos
+            </button>
+          </div>
         </div>
       </div>
 
+      {showGroupPicks && user && (
+        <GroupPicksModal userId={user.uid} onClose={() => setShowGroupPicks(false)} />
+      )}
+      {showGroupRanking && (
+        <GroupRankingModal currentUserId={user?.uid} onClose={() => setShowGroupRanking(false)} />
+      )}
 
       {/* ══════════════════════════════════════════════
           SECCIÓN 4 — CONSIDERACIONES IMPORTANTES

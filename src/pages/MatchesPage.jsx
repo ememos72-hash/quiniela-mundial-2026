@@ -6,6 +6,8 @@ import {
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { FLAGS, COUNTRY_CODES, EXACT_SCORE_PHASES, PHASE_LABELS } from '../data/worldCupData';
+import GroupPicksModal from '../components/GroupPicksModal';
+import GroupRankingModal from '../components/GroupRankingModal';
 
 const FlagImg = ({ team, size = 48 }) => {
   const code = COUNTRY_CODES[team];
@@ -654,6 +656,9 @@ const MatchesPage = () => {
   const [userPoints, setUserPoints] = useState({ total: 0, correct: 0, exact: 0 });
   const [userPredictions, setUserPredictions] = useState([]); // todas las predicciones del usuario — 1 sola query
   const [allUsers, setAllUsers]               = useState([]);
+  const [groupPicksOpen, setGroupPicksOpen]   = useState(false);
+  const [showGroupPicks, setShowGroupPicks]   = useState(false);
+  const [showGroupRanking, setShowGroupRanking] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'matches'), orderBy('date', 'asc'));
@@ -701,6 +706,13 @@ const MatchesPage = () => {
     });
   }, []);
 
+  // Config: pronóstico de grupos abierto
+  useEffect(() => {
+    return onSnapshot(doc(db, 'config', 'groupPicks'), snap => {
+      setGroupPicksOpen(snap.exists() ? (snap.data().groupPicksOpen === true) : false);
+    });
+  }, []);
+
   const filtered = matches.filter(m => {
     if (filter === 'open') return m.isOpen && !m.result;
     if (filter === 'closed') return !m.isOpen && !m.result;
@@ -741,6 +753,47 @@ const MatchesPage = () => {
           <div className="stat-box-label">Exactos</div>
         </div>
       </div>
+
+      {/* Botones de pronóstico de grupos */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+        {groupPicksOpen && (
+          <button
+            onClick={() => setShowGroupPicks(true)}
+            style={{
+              flex: 1, padding: '9px 0',
+              background: 'var(--gold)', color: 'var(--navy)',
+              border: 'none', borderRadius: 10,
+              fontFamily: "'Bebas Neue', sans-serif",
+              fontSize: 14, letterSpacing: '0.04em',
+              cursor: 'pointer',
+            }}
+          >
+            🏟️ Pronostico grupos
+          </button>
+        )}
+        <button
+          onClick={() => setShowGroupRanking(true)}
+          style={{
+            flex: groupPicksOpen ? 1 : undefined,
+            padding: '9px 14px',
+            background: 'transparent', color: 'var(--navy)',
+            border: '1px solid var(--border)', borderRadius: 10,
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: 14, letterSpacing: '0.04em',
+            cursor: 'pointer',
+            width: groupPicksOpen ? undefined : '100%',
+          }}
+        >
+          🏆 Ranking grupos
+        </button>
+      </div>
+
+      {showGroupPicks && user && (
+        <GroupPicksModal userId={user.uid} onClose={() => setShowGroupPicks(false)} />
+      )}
+      {showGroupRanking && (
+        <GroupRankingModal currentUserId={user?.uid} onClose={() => setShowGroupRanking(false)} />
+      )}
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 0, overflowX: 'auto', paddingBottom: 4 }}>
         {[
