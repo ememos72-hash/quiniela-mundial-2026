@@ -41,7 +41,7 @@ const ANUNCIOS = [
       'El Mundial empieza a sentirse y aunque aún faltan algunas semanas, este es el momento ideal para ir armando un buen grupo de participantes.\n\n' +
       'Te invito a compartir esta información con tus amigos, compañeros de trabajo y todos esos futboleros de corazón. Se viene una competencia entretenida, bien organizada y con muy buenos premios.\n\n' +
       'Durante el torneo, toda la información importante se estará moviendo por el grupo oficial de WhatsApp: resultados, recordatorios de partidos, avisos y actualizaciones clave. Si no estás en el grupo, te vas a perder parte importante de la quiniela.\n\n' +
-      'El grupo será únicamente informativo, por lo que solo el administrador podrá enviar mensajes. Así evitamos saturación y mantenemos la información clara y ordenada. Te recomiendo unirte desde ahora y no quedarte fuera de la conversación.\n\n' +
+      'El grupo será únicamente informativo, por lo que solo el administrador podrá enviar mensajes. Así evitamos saturación y mantenemos todo claro y ordenado.\n\n' +
       'Si tienes dudas o quieres más información, con gusto te puedo ayudar.\n\n' +
       'Emerson Monge\n83871924',
     link: 'https://chat.whatsapp.com/KjNRd3vzKT2CdniFVdLG36',
