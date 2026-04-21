@@ -19,6 +19,9 @@ const PREMIOS = [
   { emoji: '🥇', lugar: '1. Lugar', porcentaje: '40%', monto: '' },
   { emoji: '🥈', lugar: '2. Lugar', porcentaje: '25%', monto: '' },
   { emoji: '🥉', lugar: '3. Lugar', porcentaje: '15%', monto: '' },
+  { emoji: '4️⃣', lugar: '4. Lugar', porcentaje: 'A definir', monto: '' },
+  { emoji: '5️⃣', lugar: '5. Lugar', porcentaje: 'A definir', monto: '' },
+  { emoji: '6️⃣', lugar: '6. Lugar y más — según participación', porcentaje: 'A definir', monto: '' },
 ];
 
 // SECCION 3: TRANSFERENCIAS BANCARIAS
@@ -141,7 +144,7 @@ const PremioModal = ({ onClose }) => {
             padding: '8px 12px',
             marginBottom: 20,
           }}>
-            Se premiarán múltiples posiciones de la tabla general (aprox. Top 5-7 segun participación).
+            El número de posiciones premiadas se define según la participación total — aproximadamente el 10% de los jugadores entrará a premios. Entre más jugadores se inscriban, más posiciones se premian. Con 60 participantes se premian los 6 primeros; con 80 o más, hasta el 8vo lugar.
           </div>
 
           {/* Premios */}
