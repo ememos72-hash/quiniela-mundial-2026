@@ -25,6 +25,25 @@ import { calculatePredictionPoints } from '../utils/points';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+// Niveles visuales compartidos (Mis Picks + Community)
+const TIER_CONFIG = {
+  perfect: { bg: '#E3A20A', color: '#fff', icon: '⭐', label: 'Predicción perfecta', ptsLabel: '+8 pts',
+             pickBg: '#fffbeb', pickColor: '#E3A20A', pickBorder: '#fcd34d' },
+  exact:   { bg: '#1046AE', color: '#fff', icon: '🎯', label: 'Marcador exacto',     ptsLabel: '+5 pts',
+             pickBg: '#eff6ff', pickColor: '#1046AE', pickBorder: '#93c5fd' },
+  correct: { bg: '#1a6b3c', color: '#fff', icon: '✅', label: 'Resultado correcto',  ptsLabel: '+3 pts',
+             pickBg: '#eef6f0', pickColor: '#1a6b3c', pickBorder: '#a3c4b0' },
+  wrong:   { bg: '#e2e8f0', color: '#64748b', icon: '✗',  label: 'Incorrecto',       ptsLabel: '0 pts',
+             pickBg: '#fef2f2', pickColor: '#991b1b', pickBorder: '#fca5a5' },
+};
+const getTierConfig = (pts) => {
+  if (pts === null || pts === undefined) return null;
+  if (pts >= 8) return TIER_CONFIG.perfect;
+  if (pts >= 5) return TIER_CONFIG.exact;
+  if (pts >= 3) return TIER_CONFIG.correct;
+  return TIER_CONFIG.wrong;
+};
+
 // Tarjeta tipo recibo para "Mis Picks"
 const MyPickCard = ({ pred, match }) => {
   const pts = match.result ? calculatePredictionPoints(pred, match) : null;
@@ -47,12 +66,11 @@ const MyPickCard = ({ pred, match }) => {
   const updatedStr = fmtTs(pred.updatedAt);
   const wasEdited  = (pred.changeCount || 0) > 0;
 
-  // Color del pick según resultado
-  let pickBg = '#f0f9ff', pickColor = '#0369a1', pickBorder = '#bae6fd';
-  if (match.result) {
-    if (pts > 0) { pickBg = '#f0fdf4'; pickColor = '#15803d'; pickBorder = '#86efac'; }
-    else         { pickBg = '#fef2f2'; pickColor = '#991b1b'; pickBorder = '#fca5a5'; }
-  }
+  // Color del pick según nivel de logro
+  const tier = match.result ? getTierConfig(pts) : null;
+  const pickBg     = tier ? tier.pickBg     : '#f0f9ff';
+  const pickColor  = tier ? tier.pickColor  : '#0369a1';
+  const pickBorder = tier ? tier.pickBorder : '#bae6fd';
 
   return (
     <div style={{
@@ -72,9 +90,7 @@ const MyPickCard = ({ pred, match }) => {
           {match.teamA} vs {match.teamB}
         </div>
         {match.result
-          ? <span style={{ fontSize: 11, background: pts > 0 ? '#15803d' : '#991b1b', color: '#fff', borderRadius: 20, padding: '2px 8px', fontWeight: 600 }}>
-              {pts > 0 ? `+${pts} pts` : '0 pts'}
-            </span>
+          ? <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.7)', borderRadius: 20, padding: '2px 8px' }}>Finalizado</span>
           : match.isOpen
             ? <span style={{ fontSize: 11, background: 'var(--gold)', color: 'var(--navy)', borderRadius: 20, padding: '2px 8px', fontWeight: 600 }}>Abierto</span>
             : <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.7)', borderRadius: 20, padding: '2px 8px' }}>Esperando</span>
@@ -97,25 +113,41 @@ const MyPickCard = ({ pred, match }) => {
         {/* El pick destacado */}
         <div style={{
           background: pickBg, border: `1px solid ${pickBorder}`,
-          borderRadius: 8, padding: '7px 12px',
+          borderRadius: 10, padding: '10px 14px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           marginBottom: 10,
         }}>
-          <div>
-            <div style={{ fontSize: 10, color: pickColor, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: 2 }}>
+          {/* Izquierda: label + pick */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 10, color: pickColor, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: 3 }}>
               Tu predicción
             </div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: pickColor }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: pickColor }}>
               {pickLabel}
               {pred.teamAScore !== undefined && (
-                <span style={{ fontSize: 13, marginLeft: 8, opacity: 0.8 }}>
+                <span style={{ fontSize: 14, marginLeft: 8, opacity: 0.85 }}>
                   · {pred.teamAScore}-{pred.teamBScore}
                 </span>
               )}
             </div>
           </div>
-          {match.result && (
-            <span style={{ fontSize: 20 }}>{pts > 0 ? '✅' : '❌'}</span>
+
+          {/* Derecha: ícono | pts */}
+          {match.result && tier && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexShrink: 0, marginLeft: 12 }}>
+              <span style={{ fontSize: 24, lineHeight: 1 }}>{tier.icon}</span>
+              {pts > 0 && (
+                <>
+                  <div style={{ width: 1, height: 28, background: pickBorder, margin: '0 10px' }} />
+                  <span style={{
+                    fontFamily: "'Bebas Neue', sans-serif",
+                    fontSize: 30, color: pickColor, lineHeight: 1,
+                  }}>
+                    +{pts}
+                  </span>
+                </>
+              )}
+            </div>
           )}
         </div>
 
@@ -143,9 +175,10 @@ const MyPickCard = ({ pred, match }) => {
 // Picks de la comunidad (cerrados y jugados)
 const CommunityPicks = ({ match, userId, allUsers, show, onToggle, preds, setPreds, loading, setLoading }) => {
   const hasResult = !!match.result;
+  const allowExact = EXACT_SCORE_PHASES.includes(match.phase);
 
   const loadPreds = async () => {
-    if (preds.length > 0) return; // ya cargados
+    if (preds.length > 0) return;
     setLoading(true);
     const snap = await getDocs(query(collection(db, 'predictions'), where('matchId', '==', match.id)));
     setPreds(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -157,7 +190,6 @@ const CommunityPicks = ({ match, userId, allUsers, show, onToggle, preds, setPre
     onToggle();
   };
 
-  // Distribución de votos
   const countA    = preds.filter(p => p.result === 'teamA').length;
   const countDraw = preds.filter(p => p.result === 'draw').length;
   const countB    = preds.filter(p => p.result === 'teamB').length;
@@ -176,7 +208,11 @@ const CommunityPicks = ({ match, userId, allUsers, show, onToggle, preds, setPre
     return calculatePredictionPoints(pred, match);
   };
 
-  // Lista ordenada: con predicción primero (por puntos desc), luego sin
+  const getInits = (name) => {
+    if (!name) return '?';
+    return name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  };
+
   const rows = allUsers.map(u => ({
     user: u,
     pred: preds.find(p => p.userId === u.id) || null,
@@ -185,9 +221,7 @@ const CommunityPicks = ({ match, userId, allUsers, show, onToggle, preds, setPre
     if (!a.pred) return 1;
     if (!b.pred) return -1;
     if (hasResult) {
-      const pA = getPts(a.pred) || 0;
-      const pB = getPts(b.pred) || 0;
-      return pB - pA;
+      return (getPts(b.pred) ?? 0) - (getPts(a.pred) ?? 0);
     }
     return 0;
   });
@@ -243,52 +277,72 @@ const CommunityPicks = ({ match, userId, allUsers, show, onToggle, preds, setPre
                 </div>
               </div>
 
-              {/* Lista completa con nombres */}
-              {allUsers.length > 0 && rows.map(({ user, pred }) => {
-                const pts = pred ? getPts(pred) : null;
+              {/* ── Lista de picks por jugador ── */}
+              {allUsers.length > 0 && rows.map(({ user, pred }, rowIdx) => {
+                const pts  = pred ? getPts(pred) : null;
                 const isMe = user.id === userId;
                 const label = pred ? pickLabel(pred.result) : null;
-                let rowBg = 'transparent';
-                if (hasResult && pred) rowBg = pts > 0 ? '#f0fdf4' : '#fef2f2';
-                if (isMe) rowBg = '#fefce8';
+                const tier = (hasResult && pred) ? getTierConfig(pts) : null;
 
                 return (
                   <div key={user.id} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '5px 8px', borderRadius: 6, background: rowBg,
-                    marginBottom: 2, fontSize: 12,
+                    display: 'flex', alignItems: 'center', gap: 7,
+                    padding: '7px 6px', borderRadius: 8,
+                    background: isMe ? '#fefce8' : 'transparent',
+                    border: isMe ? '1px solid #fcd34d' : '1px solid transparent',
+                    marginBottom: 3,
                   }}>
-                    <span style={{ color: 'var(--navy)', fontWeight: isMe ? 700 : 400 }}>
-                      {user.displayName || user.email}
-                      {isMe && <span style={{ marginLeft: 4, fontSize: 10, background: 'var(--gold)', color: 'var(--navy)', borderRadius: 10, padding: '1px 5px' }}>Tú</span>}
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {pred ? (
-                        <>
-                          <span style={{
-                            fontSize: 11, fontWeight: 600,
-                            color: hasResult ? (pts > 0 ? '#15803d' : '#991b1b') : '#0369a1',
-                          }}>
-                            {label}
-                            {pred.teamAScore !== undefined && ` (${pred.teamAScore}-${pred.teamBScore})`}
+                    {/* Nombre + pick */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: 12, fontWeight: isMe ? 700 : 500,
+                        color: 'var(--navy)',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      }}>
+                        {user.displayName || user.email}
+                        {isMe && (
+                          <span style={{ marginLeft: 4, fontSize: 9, background: 'var(--gold)', color: 'var(--navy)', borderRadius: 10, padding: '1px 5px', fontWeight: 700 }}>
+                            TÚ
                           </span>
-                          {hasResult && (
-                            <span style={{ fontWeight: 700, fontSize: 12, color: pts >= 5 ? '#7c3aed' : pts >= 3 ? '#15803d' : '#991b1b' }}>
-                              {pts > 0 ? `+${pts}` : '0'}
-                            </span>
-                          )}
-                        </>
+                        )}
+                      </div>
+                      {pred ? (
+                        <div style={{
+                          fontSize: 11, fontWeight: 500,
+                          color: hasResult ? (pts > 0 ? '#15803d' : '#94a3b8') : '#0369a1',
+                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                        }}>
+                          {label}{pred.teamAScore !== undefined ? ` (${pred.teamAScore}-${pred.teamBScore})` : ''}
+                        </div>
                       ) : (
-                        <span style={{ fontSize: 11, color: '#cbd5e1', fontStyle: 'italic' }}>No predijo</span>
+                        <div style={{ fontSize: 11, color: '#cbd5e1', fontStyle: 'italic' }}>No predijo</div>
                       )}
                     </div>
+
+                    {/* Badge de nivel */}
+                    {tier && (
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 3,
+                        background: tier.bg, color: tier.color,
+                        borderRadius: 20, padding: '4px 8px',
+                        fontSize: 10, fontWeight: 700, flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                      }}>
+                        <span style={{ fontSize: 11 }}>{tier.icon}</span>
+                        <span>{tier.label} {tier.ptsLabel}</span>
+                      </div>
+                    )}
+                    {!hasResult && pred && (
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>— pts</span>
+                    )}
                   </div>
                 );
               })}
 
-              <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+              <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
                 {total} de {allUsers.length} jugadores predijeron
               </div>
+
             </>
           )}
         </div>
@@ -625,6 +679,71 @@ const MatchCard = ({ match, userId, allUsers, userPrediction }) => {
   );
 };
 
+// Acordeón de Mis Picks por fase
+const PicksAccordion = ({ picksByPhase, totalPicks }) => {
+  const [openPhases, setOpenPhases] = useState({});
+  const togglePhase = (phase) => setOpenPhases(prev => ({ ...prev, [phase]: !prev[phase] }));
+
+  return (
+    <>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center' }}>
+        {totalPicks} predicción{totalPicks !== 1 ? 'es' : ''} guardada{totalPicks !== 1 ? 's' : ''}
+      </div>
+
+      {Object.entries(picksByPhase).map(([phase, picks]) => {
+        const isOpen = openPhases[phase] === true;
+        const pts = picks.reduce((sum, { pred, match }) =>
+          sum + (match.result ? calculatePredictionPoints(pred, match) : 0), 0);
+        const jugados = picks.filter(({ match }) => !!match.result).length;
+
+        return (
+          <div key={phase} style={{ marginBottom: 8 }}>
+            {/* Cabecera acordeón de fase */}
+            <div
+              onClick={() => togglePhase(phase)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px 14px',
+                borderRadius: isOpen ? '10px 10px 0 0' : 10,
+                background: 'var(--navy)', cursor: 'pointer', userSelect: 'none',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
+                  {PHASE_LABELS[phase] || phase}
+                </div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>
+                  {picks.length} predicción{picks.length !== 1 ? 'es' : ''}
+                  {jugados > 0 && (
+                    <span style={{ marginLeft: 6, color: 'var(--gold-light)', fontWeight: 600 }}>
+                      · {pts} pts
+                    </span>
+                  )}
+                </div>
+              </div>
+              <span style={{ color: 'var(--gold-light)', fontSize: 18 }}>
+                {isOpen ? '▲' : '▼'}
+              </span>
+            </div>
+
+            {/* Cards de picks */}
+            {isOpen && (
+              <div style={{
+                border: '1px solid var(--border)', borderTop: 'none',
+                borderRadius: '0 0 10px 10px', padding: '10px 10px 4px',
+              }}>
+                {picks.map(({ pred, match }) => (
+                  <MyPickCard key={pred.id} pred={pred} match={match} />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+};
+
 const PaymentGate = () => (
   <div className="page" style={{ textAlign: 'center', paddingTop: 40 }}>
     <div style={{ fontSize: 52, marginBottom: 16 }}>🔒</div>
@@ -652,7 +771,11 @@ const MatchesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('open');
-  const [openDay, setOpenDay] = useState(null); // acordeón
+  const [openDays, setOpenDays]     = useState({});
+  const [openPhases, setOpenPhases] = useState({});
+
+  const toggleDay   = (key) => setOpenDays(prev => ({ ...prev, [key]: !prev[key] }));
+  const togglePhase = (key) => setOpenPhases(prev => ({ ...prev, [key]: !prev[key] }));
   const [userPoints, setUserPoints] = useState({ total: 0, correct: 0, exact: 0 });
   const [userPredictions, setUserPredictions] = useState([]); // todas las predicciones del usuario — 1 sola query
   const [allUsers, setAllUsers]               = useState([]);
@@ -720,11 +843,19 @@ const MatchesPage = () => {
     return true;
   });
 
-  // Agrupar por fecha (día)
-  const grouped = filtered.reduce((acc, m) => {
-    const day = m.date ? m.date.slice(0, 10) : 'Sin fecha';
-    if (!acc[day]) acc[day] = [];
-    acc[day].push(m);
+  // Agrupar por fase → por fecha
+  const PHASE_ORDER = ['groups', 'round_of_32', 'round_of_16', 'quarters', 'semis', 'third_place', 'final'];
+
+  const groupedByPhase = PHASE_ORDER.reduce((acc, phase) => {
+    const phaseMatches = filtered.filter(m => m.phase === phase);
+    if (phaseMatches.length === 0) return acc;
+    const byDate = phaseMatches.reduce((dAcc, m) => {
+      const day = m.date ? m.date.slice(0, 10) : 'Sin fecha';
+      if (!dAcc[day]) dAcc[day] = [];
+      dAcc[day].push(m);
+      return dAcc;
+    }, {});
+    acc[phase] = byDate;
     return acc;
   }, {});
 
@@ -746,34 +877,18 @@ const MatchesPage = () => {
         </div>
         <div className="stat-box">
           <div className="stat-box-num">{userPoints.correct}</div>
-          <div className="stat-box-label">Aciertos</div>
+          <div className="stat-box-label" style={{ textAlign: 'center', lineHeight: 1.3 }}>
+            Total Aciertos<br />de 3pts
+          </div>
         </div>
         <div className="stat-box">
           <div className="stat-box-num">{userPoints.exact}</div>
-          <div className="stat-box-label">Exactos</div>
+          <div className="stat-box-label" style={{ textAlign: 'center', lineHeight: 1.3 }}>
+            Total Aciertos<br />de 5pts
+          </div>
         </div>
       </div>
 
-      {/* Botón de desempate de grupos */}
-      <div style={{ marginBottom: 14, textAlign: 'right' }}>
-        <button
-          onClick={() => setShowGroupRanking(true)}
-          style={{
-            padding: '8px 16px',
-            background: 'transparent', color: 'var(--text-muted)',
-            border: '1px solid var(--border)', borderRadius: 20,
-            fontFamily: "'DM Sans', sans-serif",
-            fontSize: 11, fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          Ver Clasificados Para Desempate
-        </button>
-      </div>
-
-      {showGroupRanking && (
-        <GroupRankingModal currentUserId={user?.uid} onClose={() => setShowGroupRanking(false)} />
-      )}
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 0, overflowX: 'auto', paddingBottom: 4 }}>
         {[
@@ -785,7 +900,7 @@ const MatchesPage = () => {
         ].map(f => (
           <button
             key={f.key}
-            onClick={() => { setFilter(f.key); setOpenDay(null); }}
+            onClick={() => { setFilter(f.key); setOpenDays({}); setOpenPhases({}); }}
             style={{
               padding: '5px 14px',
               borderRadius: 20,
@@ -819,44 +934,46 @@ const MatchesPage = () => {
         ) : null;
       })()}
 
-      {/* Vista "Mis Picks" — reutiliza userPredictions, sin query extra */}
+      {/* Vista "Mis Picks" — acordeón por fase */}
       {filter === 'mispicks' && (() => {
         const validPicks = userPredictions
           .map(pred => ({ pred, match: matches.find(m => m.id === pred.matchId) }))
           .filter(({ match }) => !!match)
           .sort((a, b) => (a.match.date > b.match.date ? 1 : -1));
+
+        if (validPicks.length === 0) return (
+          <div className="text-center text-muted" style={{ marginTop: 40 }}>
+            Aún no has guardado ninguna predicción
+          </div>
+        );
+
+        const PHASE_ORDER = ['groups', 'round_of_32', 'round_of_16', 'quarters', 'semis', 'third_place', 'final'];
+        const picksByPhase = PHASE_ORDER.reduce((acc, phase) => {
+          const picks = validPicks.filter(({ match }) => match.phase === phase);
+          if (picks.length > 0) acc[phase] = picks;
+          return acc;
+        }, {});
+
         return (
-          <>
-            {validPicks.length === 0 && (
-              <div className="text-center text-muted" style={{ marginTop: 40 }}>
-                Aún no has guardado ninguna predicción
-              </div>
-            )}
-            {validPicks.length > 0 && (
-              <>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center' }}>
-                  {validPicks.length} predicción{validPicks.length !== 1 ? 'es' : ''} guardada{validPicks.length !== 1 ? 's' : ''}
-                </div>
-                {validPicks.map(({ pred, match }) => (
-                  <MyPickCard key={pred.id} pred={pred} match={match} />
-                ))}
-              </>
-            )}
-          </>
+          <PicksAccordion
+            picksByPhase={picksByPhase}
+            totalPicks={validPicks.length}
+          />
         );
       })()}
 
-      {/* Vista normal de partidos — acordeón por fecha */}
+      {/* Vista normal de partidos — por fase → acordeón por fecha */}
       {filter !== 'mispicks' && (
         <>
           {loading && <div className="page-loading"><div className="spinner" /></div>}
-          {!loading && Object.keys(grouped).length === 0 && (
+          {!loading && Object.keys(groupedByPhase).length === 0 && (
             <div className="text-center text-muted" style={{ marginTop: 40 }}>
               No hay partidos disponibles aún
             </div>
           )}
-          {!loading && Object.entries(grouped).map(([day, dayMatches], idx) => {
-            const isOpen = openDay !== null ? openDay === day : idx === 0;
+          {!loading && Object.entries(groupedByPhase).map(([phase, byDate]) => {
+            const phaseOpen = openPhases[phase] === true;
+            const totalMatches = Object.values(byDate).flat().length;
             const fmtDay = (d) => {
               try {
                 return new Date(d + 'T12:00:00').toLocaleDateString('es-CR', {
@@ -864,50 +981,90 @@ const MatchesPage = () => {
                 });
               } catch { return d; }
             };
+
             return (
-              <div key={day} style={{ marginBottom: 6 }}>
-                {/* Cabecera */}
+              <div key={phase} style={{ marginBottom: 8 }}>
+                {/* Cabecera de fase — acordeón */}
                 <div
-                  onClick={() => setOpenDay(isOpen ? '__none__' : day)}
+                  onClick={() => togglePhase(phase)}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '9px 12px',
-                    background: isOpen ? 'var(--navy)' : '#f1f5f9',
-                    borderRadius: isOpen ? '8px 8px 0 0' : 8,
-                    cursor: 'pointer', userSelect: 'none',
+                    padding: '10px 14px',
+                    borderRadius: phaseOpen ? '10px 10px 0 0' : 10,
+                    background: 'var(--navy)', cursor: 'pointer', userSelect: 'none',
                   }}
                 >
                   <div>
-                    <span style={{
-                      fontSize: 13, fontWeight: 600, textTransform: 'capitalize',
-                      color: isOpen ? '#fff' : 'var(--navy)',
-                    }}>
-                      {fmtDay(day)}
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '0.02em' }}>
+                      {PHASE_LABELS[phase] || phase}
                     </span>
-                    <span style={{
-                      fontSize: 11, marginLeft: 8,
-                      color: isOpen ? 'rgba(255,255,255,0.5)' : 'var(--text-muted)',
-                    }}>
-                      {dayMatches.length} partido{dayMatches.length !== 1 ? 's' : ''}
+                    <span style={{ fontSize: 11, marginLeft: 8, color: 'rgba(255,255,255,0.5)' }}>
+                      {totalMatches} partido{totalMatches !== 1 ? 's' : ''}
                     </span>
                   </div>
-                  <span style={{ fontSize: 12, color: isOpen ? 'var(--gold-light)' : 'var(--text-muted)' }}>
-                    {isOpen ? '▲' : '▼'}
+                  <span style={{ color: 'var(--gold-light)', fontSize: 18 }}>
+                    {phaseOpen ? '▲' : '▼'}
                   </span>
                 </div>
 
-                {/* Partidos del día */}
-                {isOpen && (
-                  <div style={{ border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: '8px 0 4px' }}>
-                    {dayMatches.map(match => (
-                      <MatchCard
-                        key={match.id}
-                        match={match}
-                        userId={user?.uid}
-                        allUsers={allUsers}
-                        userPrediction={userPredictions.find(p => p.matchId === match.id) || null}
-                      />
-                    ))}
+                {/* Fechas dentro de la fase */}
+                {phaseOpen && (
+                  <div style={{
+                    border: '1px solid var(--border)', borderTop: 'none',
+                    borderRadius: '0 0 10px 10px', padding: '8px 8px 4px',
+                  }}>
+                    {Object.entries(byDate).map(([day, dayMatches]) => {
+                      const key = `${phase}_${day}`;
+                      const dayOpen = openDays[key] === true;
+                      return (
+                        <div key={key} style={{ marginBottom: 6 }}>
+                          {/* Cabecera del día */}
+                          <div
+                            onClick={() => toggleDay(key)}
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                              padding: '8px 12px',
+                              background: dayOpen ? '#1e3a5f' : '#f1f5f9',
+                              borderRadius: dayOpen ? '8px 8px 0 0' : 8,
+                              cursor: 'pointer', userSelect: 'none',
+                            }}
+                          >
+                            <div>
+                              <span style={{
+                                fontSize: 12, fontWeight: 600, textTransform: 'capitalize',
+                                color: dayOpen ? '#fff' : 'var(--navy)',
+                              }}>
+                                {fmtDay(day)}
+                              </span>
+                              <span style={{
+                                fontSize: 11, marginLeft: 8,
+                                color: dayOpen ? 'rgba(255,255,255,0.5)' : 'var(--text-muted)',
+                              }}>
+                                {dayMatches.length} partido{dayMatches.length !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: 11, color: dayOpen ? 'var(--gold-light)' : 'var(--text-muted)' }}>
+                              {dayOpen ? '▲' : '▼'}
+                            </span>
+                          </div>
+
+                          {/* Partidos del día */}
+                          {dayOpen && (
+                            <div style={{ border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: '8px 0 4px' }}>
+                              {dayMatches.map(match => (
+                                <MatchCard
+                                  key={match.id}
+                                  match={match}
+                                  userId={user?.uid}
+                                  allUsers={allUsers}
+                                  userPrediction={userPredictions.find(p => p.matchId === match.id) || null}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

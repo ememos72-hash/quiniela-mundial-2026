@@ -50,8 +50,8 @@ const recalcularPuntos = async (matchId, matchConResultado) => {
         ? calculatePredictionPoints(pred, matchDelPred)
         : (pred.pointsAwarded || 0);
       total += awarded;
-      if (awarded >= 3) correct++;
-      if (awarded >= 5) exact++;
+      if (awarded >= 3) correct++;   // todos los aciertos de resultado (incluye exactos)
+      if (awarded >= 8) exact++;     // solo marcador exacto (componente de 5pts)
     }
     await setDoc(doc(db, 'users', userId), {
       totalPoints: total,
@@ -327,8 +327,8 @@ const CompletedMatchRow = ({ match }) => {
         for (const up of userPreds) {
           const awarded = up.data().pointsAwarded || 0;
           total += awarded;
-          if (awarded >= 3) correct++;
-          if (awarded >= 5) exact++;
+          if (awarded >= 3) correct++;   // todos los aciertos de resultado (incluye exactos)
+          if (awarded >= 8) exact++;     // solo marcador exacto (componente de 5pts)
         }
         await setDoc(doc(db, 'users', userId), { totalPoints: total, correctResults: correct, exactScores: exact }, { merge: true });
       }
@@ -685,6 +685,80 @@ const SlideEditor = ({ slide, index, total, onChange, onDelete }) => {
 };
 
 // --- Group Picks Toggle ---
+// --- Recalcular estadísticas de todos los usuarios ---
+const RecalcularStatsButton = () => {
+  const [status, setStatus] = useState('idle'); // idle | running | done | error
+  const [msg, setMsg]       = useState('');
+
+  const recalcularTodo = async () => {
+    if (!window.confirm('¿Recalcular estadísticas de todos los jugadores? Esto puede tardar unos segundos.')) return;
+    setStatus('running');
+    setMsg('');
+    try {
+      const [predsSnap, usersSnap] = await Promise.all([
+        getDocs(collection(db, 'predictions')),
+        getDocs(collection(db, 'users')),
+      ]);
+
+      // Acumular totales por usuario
+      const totals = {};
+      predsSnap.docs.forEach(d => {
+        const p = d.data();
+        if (!totals[p.userId]) totals[p.userId] = { totalPoints: 0, correctResults: 0, exactScores: 0 };
+        const awarded = p.pointsAwarded || 0;
+        totals[p.userId].totalPoints += awarded;
+        if (awarded >= 3) totals[p.userId].correctResults++;
+        if (awarded >= 8) totals[p.userId].exactScores++;
+      });
+
+      // Actualizar cada usuario
+      let updated = 0;
+      for (const userDoc of usersSnap.docs) {
+        const t = totals[userDoc.id] || { totalPoints: 0, correctResults: 0, exactScores: 0 };
+        await setDoc(doc(db, 'users', userDoc.id), {
+          totalPoints:    t.totalPoints,
+          correctResults: t.correctResults,
+          exactScores:    t.exactScores,
+        }, { merge: true });
+        updated++;
+      }
+
+      setStatus('done');
+      setMsg(`✅ ${updated} jugadores actualizados`);
+    } catch (e) {
+      setStatus('error');
+      setMsg('Error: ' + e.message);
+    }
+  };
+
+  return (
+    <div className="admin-section" style={{ marginBottom: 16 }}>
+      <div className="admin-section-title">🔄 Recalcular Estadísticas</div>
+      <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+        Recalcula puntos totales, aciertos y exactos de todos los jugadores desde cero. Úsalo si cambiaste la lógica de puntos o si los números no cuadran.
+      </div>
+      <button
+        onClick={recalcularTodo}
+        disabled={status === 'running'}
+        style={{
+          padding: '10px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
+          background: status === 'done' ? '#15803d' : status === 'error' ? '#991b1b' : 'var(--navy)',
+          color: '#fff', fontWeight: 600, fontSize: 13,
+          fontFamily: "'DM Sans', sans-serif",
+          opacity: status === 'running' ? 0.7 : 1,
+        }}
+      >
+        {status === 'running' ? '⏳ Recalculando...' : '🔄 Recalcular todos los jugadores'}
+      </button>
+      {msg && (
+        <div style={{ marginTop: 10, fontSize: 13, color: status === 'done' ? '#15803d' : '#991b1b', fontWeight: 600 }}>
+          {msg}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const GroupPicksToggle = () => {
   const [open,   setOpen]   = useState(false);
   const [saving, setSaving] = useState(false);
@@ -1331,29 +1405,43 @@ const ReportesTab = ({ matches, users }) => {
   );
 };
 
-// --- Resultados agrupados por fecha (acordeón) ---
+// --- Resultados agrupados por fase → fecha (acordeón independiente) ---
 const ResultadosTab = ({ matches }) => {
-  const pending  = matches.filter(m => !m.result);
-  const done     = matches.filter(m => m.result);
+  const [openDays, setOpenDays] = useState({});
+  const toggleDay = (key) => setOpenDays(prev => ({ ...prev, [key]: !prev[key] }));
 
-  // Agrupar pendientes por día
-  const byDay = pending.reduce((acc, m) => {
-    const day = m.date ? m.date.slice(0, 10) : 'Sin fecha';
-    if (!acc[day]) acc[day] = [];
-    acc[day].push(m);
+  const pending = matches.filter(m => !m.result);
+  const done    = matches.filter(m => m.result);
+
+  const PHASE_ORDER = ['groups', 'round_of_32', 'round_of_16', 'quarters', 'semis', 'third_place', 'final'];
+
+  const byPhase = PHASE_ORDER.reduce((acc, phase) => {
+    const phaseMatches = pending.filter(m => m.phase === phase);
+    if (phaseMatches.length === 0) return acc;
+    const byDay = phaseMatches.reduce((dAcc, m) => {
+      const day = m.date ? m.date.slice(0, 10) : 'Sin fecha';
+      if (!dAcc[day]) dAcc[day] = [];
+      dAcc[day].push(m);
+      return dAcc;
+    }, {});
+    acc[phase] = byDay;
+    return acc;
+  }, {});
+
+  // Agrupar los "ya con resultado" también por fase
+  const doneByPhase = PHASE_ORDER.reduce((acc, phase) => {
+    const phaseMatches = done.filter(m => m.phase === phase);
+    if (phaseMatches.length > 0) acc[phase] = phaseMatches;
     return acc;
   }, {});
 
   const fmtDay = (dateStr) => {
     try {
-      const d = new Date(dateStr + 'T12:00:00');
-      return d.toLocaleDateString('es-CR', { weekday: 'long', day: 'numeric', month: 'long' });
+      return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-CR', {
+        weekday: 'long', day: 'numeric', month: 'long',
+      });
     } catch { return dateStr; }
   };
-
-  // Abre el primer día con partidos por defecto
-  const firstDay = Object.keys(byDay)[0] || null;
-  const [openDay, setOpenDay] = useState(firstDay);
 
   return (
     <>
@@ -1367,69 +1455,115 @@ const ResultadosTab = ({ matches }) => {
         </div>
       )}
 
-      {Object.entries(byDay).map(([day, dayMatches]) => (
-        <div key={day} style={{ marginBottom: 8 }}>
-          {/* Cabecera acordeón */}
-          <div
-            onClick={() => setOpenDay(openDay === day ? null : day)}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '10px 14px', borderRadius: openDay === day ? '10px 10px 0 0' : 10,
-              background: 'var(--navy)', cursor: 'pointer', userSelect: 'none',
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', textTransform: 'capitalize' }}>
-                {fmtDay(day)}
-              </div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>
-                {dayMatches.length} partido{dayMatches.length !== 1 ? 's' : ''}
-              </div>
-            </div>
-            <span style={{ color: 'var(--gold-light)', fontSize: 18 }}>
-              {openDay === day ? '▲' : '▼'}
+      {/* Pendientes organizados por fase → fecha */}
+      {Object.entries(byPhase).map(([phase, byDay]) => (
+        <div key={phase} style={{ marginBottom: 20 }}>
+
+          {/* Separador de fase */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+            <span style={{
+              fontFamily: "'Bebas Neue', sans-serif",
+              fontSize: 13, letterSpacing: '0.08em',
+              color: 'var(--navy)', padding: '0 8px',
+              background: '#fff', whiteSpace: 'nowrap',
+            }}>
+              {PHASE_LABELS[phase] || phase}
             </span>
+            <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
           </div>
 
-          {/* Contenido colapsable */}
-          {openDay === day && (
-            <div style={{ border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 10px 10px', padding: '8px 8px 4px' }}>
-              {dayMatches.map(m => <MatchResultEntry key={m.id} match={m} />)}
-            </div>
-          )}
+          {Object.entries(byDay).map(([day, dayMatches]) => {
+            const key = `${phase}_${day}`;
+            const isOpen = openDays[key] === true;
+            return (
+              <div key={key} style={{ marginBottom: 8 }}>
+                <div
+                  onClick={() => toggleDay(key)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    borderRadius: isOpen ? '10px 10px 0 0' : 10,
+                    background: 'var(--navy)', cursor: 'pointer', userSelect: 'none',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', textTransform: 'capitalize' }}>
+                      {fmtDay(day)}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 1 }}>
+                      {dayMatches.length} partido{dayMatches.length !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                  <span style={{ color: 'var(--gold-light)', fontSize: 18 }}>
+                    {isOpen ? '▲' : '▼'}
+                  </span>
+                </div>
+                {isOpen && (
+                  <div style={{ border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 10px 10px', padding: '8px 8px 4px' }}>
+                    {dayMatches.map(m => <MatchResultEntry key={m.id} match={m} />)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       ))}
 
-      {/* Ya con resultado */}
+      {/* Ya con resultado — agrupados por fase, colapsados */}
       {done.length > 0 && (
-        <div style={{ marginTop: 16 }}>
-          <div
-            onClick={() => setOpenDay(openDay === '__done__' ? null : '__done__')}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '10px 14px', borderRadius: openDay === '__done__' ? '10px 10px 0 0' : 10,
-              background: '#f0fdf4', border: '1px solid #86efac', cursor: 'pointer',
-            }}
-          >
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d' }}>
+        <div style={{ marginTop: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <div style={{ flex: 1, height: 1, background: '#86efac' }} />
+            <span style={{
+              fontFamily: "'Bebas Neue', sans-serif",
+              fontSize: 13, letterSpacing: '0.08em',
+              color: '#15803d', padding: '0 8px',
+              background: '#fff', whiteSpace: 'nowrap',
+            }}>
               ✅ Ya con resultado ({done.length})
-            </div>
-            <span style={{ color: '#15803d', fontSize: 18 }}>
-              {openDay === '__done__' ? '▲' : '▼'}
             </span>
+            <div style={{ flex: 1, height: 1, background: '#86efac' }} />
           </div>
-          {openDay === '__done__' && (
-            <div style={{ border: '1px solid #86efac', borderTop: 'none', borderRadius: '0 0 10px 10px', padding: '8px 8px 4px' }}>
-              {done.map(m => <CompletedMatchRow key={m.id} match={m} />)}
-            </div>
-          )}
+
+          {Object.entries(doneByPhase).map(([phase, phaseMatches]) => {
+            const key = `done_${phase}`;
+            const isOpen = openDays[key] === true;
+            return (
+              <div key={key} style={{ marginBottom: 6 }}>
+                <div
+                  onClick={() => toggleDay(key)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '9px 14px',
+                    borderRadius: isOpen ? '10px 10px 0 0' : 10,
+                    background: '#f0fdf4', border: '1px solid #86efac',
+                    cursor: 'pointer', userSelect: 'none',
+                  }}
+                >
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d' }}>
+                    {PHASE_LABELS[phase] || phase}
+                    <span style={{ fontSize: 11, fontWeight: 400, marginLeft: 8, color: '#16a34a' }}>
+                      {phaseMatches.length} partido{phaseMatches.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <span style={{ color: '#15803d', fontSize: 16 }}>{isOpen ? '▲' : '▼'}</span>
+                </div>
+                {isOpen && (
+                  <div style={{ border: '1px solid #86efac', borderTop: 'none', borderRadius: '0 0 10px 10px', padding: '8px 8px 4px' }}>
+                    {phaseMatches.map(m => <CompletedMatchRow key={m.id} match={m} />)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </>
   );
 };
 
-// --- Abrir / Cerrar partidos por día ---
+// --- Abrir / Cerrar partidos — agrupado por fase y día ---
 const AbrirPartidosTab = ({ matches }) => {
   const [saving, setSaving] = useState({});
 
@@ -1442,40 +1576,47 @@ const AbrirPartidosTab = ({ matches }) => {
   const abrirTodos = async (dayMatches) => {
     const cerrados = dayMatches.filter(m => !m.isOpen && !m.result);
     if (cerrados.length === 0) return;
-    const ids = cerrados.map(m => m.id);
-    ids.forEach(id => setSaving(s => ({ ...s, [id]: true })));
+    cerrados.forEach(m => setSaving(s => ({ ...s, [m.id]: true })));
     const batch = writeBatch(db);
     cerrados.forEach(m => batch.update(doc(db, 'matches', m.id), { isOpen: true }));
     await batch.commit();
-    ids.forEach(id => setSaving(s => ({ ...s, [id]: false })));
+    cerrados.forEach(m => setSaving(s => ({ ...s, [m.id]: false })));
   };
 
   const cerrarTodos = async (dayMatches) => {
     const abiertos = dayMatches.filter(m => m.isOpen && !m.result);
     if (abiertos.length === 0) return;
-    const ids = abiertos.map(m => m.id);
-    ids.forEach(id => setSaving(s => ({ ...s, [id]: true })));
+    abiertos.forEach(m => setSaving(s => ({ ...s, [m.id]: true })));
     const batch = writeBatch(db);
     abiertos.forEach(m => batch.update(doc(db, 'matches', m.id), { isOpen: false }));
     await batch.commit();
-    ids.forEach(id => setSaving(s => ({ ...s, [id]: false })));
+    abiertos.forEach(m => setSaving(s => ({ ...s, [m.id]: false })));
   };
-
-  // Agrupar por día (solo partidos sin resultado)
-  const sinResultado = matches.filter(m => !m.result);
-  const byDay = sinResultado.reduce((acc, m) => {
-    const day = m.date ? m.date.slice(0, 10) : 'Sin fecha';
-    if (!acc[day]) acc[day] = [];
-    acc[day].push(m);
-    return acc;
-  }, {});
 
   const fmtDay = (dateStr) => {
     try {
-      const d = new Date(dateStr + 'T12:00:00');
-      return d.toLocaleDateString('es-CR', { weekday: 'long', day: 'numeric', month: 'long' });
+      return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-CR', {
+        weekday: 'long', day: 'numeric', month: 'long',
+      });
     } catch { return dateStr; }
   };
+
+  // Solo partidos sin resultado, agrupados por fase → día
+  const PHASE_ORDER = ['groups', 'round_of_32', 'round_of_16', 'quarters', 'semis', 'third_place', 'final'];
+  const sinResultado = matches.filter(m => !m.result);
+
+  const byPhase = PHASE_ORDER.reduce((acc, phase) => {
+    const phaseMatches = sinResultado.filter(m => m.phase === phase);
+    if (phaseMatches.length === 0) return acc;
+    const byDay = phaseMatches.reduce((dAcc, m) => {
+      const day = m.date ? m.date.slice(0, 10) : 'Sin fecha';
+      if (!dAcc[day]) dAcc[day] = [];
+      dAcc[day].push(m);
+      return dAcc;
+    }, {});
+    acc[phase] = byDay;
+    return acc;
+  }, {});
 
   if (sinResultado.length === 0) {
     return <div className="text-center text-muted" style={{ marginTop: 30 }}>No hay partidos pendientes</div>;
@@ -1487,94 +1628,104 @@ const AbrirPartidosTab = ({ matches }) => {
         Verde = abierto para predicciones · Gris = cerrado
       </div>
 
-      {Object.entries(byDay).map(([day, dayMatches]) => {
-        const openCount   = dayMatches.filter(m => m.isOpen).length;
-        const closedCount = dayMatches.filter(m => !m.isOpen).length;
-        const allOpen     = closedCount === 0;
-        const allClosed   = openCount === 0;
+      {Object.entries(byPhase).map(([phase, byDay]) => (
+        <div key={phase} style={{ marginBottom: 24 }}>
 
-        return (
-          <div key={day} style={{ marginBottom: 20 }}>
-            {/* Cabecera del día */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              background: allOpen ? '#f0fdf4' : allClosed ? '#f8fafc' : '#fefce8',
-              border: `1px solid ${allOpen ? '#86efac' : allClosed ? 'var(--border)' : '#fde047'}`,
-              borderRadius: 10, padding: '10px 14px', marginBottom: 8,
+          {/* Separador de fase */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+            <span style={{
+              fontFamily: "'Bebas Neue', sans-serif",
+              fontSize: 13, letterSpacing: '0.08em',
+              color: 'var(--navy)', padding: '0 8px',
+              background: '#fff', whiteSpace: 'nowrap',
             }}>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--navy)', textTransform: 'capitalize' }}>
-                  {fmtDay(day)}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                  {openCount > 0 && <span style={{ color: '#15803d', fontWeight: 600 }}>{openCount} abierto{openCount !== 1 ? 's' : ''}</span>}
-                  {openCount > 0 && closedCount > 0 && ' · '}
-                  {closedCount > 0 && <span style={{ color: '#64748b' }}>{closedCount} cerrado{closedCount !== 1 ? 's' : ''}</span>}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {closedCount > 0 && (
-                  <button
-                    onClick={() => abrirTodos(dayMatches)}
-                    style={{
-                      fontSize: 11, padding: '4px 10px', borderRadius: 20, cursor: 'pointer',
-                      border: 'none', background: '#15803d', color: '#fff', fontWeight: 600,
-                    }}
-                  >
-                    Abrir todos
-                  </button>
-                )}
-                {openCount > 0 && (
-                  <button
-                    onClick={() => cerrarTodos(dayMatches)}
-                    style={{
-                      fontSize: 11, padding: '4px 10px', borderRadius: 20, cursor: 'pointer',
-                      border: '1px solid var(--border)', background: '#fff', color: '#64748b', fontWeight: 600,
-                    }}
-                  >
-                    Cerrar todos
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Partidos del día */}
-            {dayMatches.map(match => (
-              <div
-                key={match.id}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '10px 14px', marginBottom: 6, borderRadius: 8,
-                  background: match.isOpen ? '#f0fdf4' : '#f8fafc',
-                  border: `1px solid ${match.isOpen ? '#86efac' : 'var(--border)'}`,
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--navy)' }}>
-                    {FLAGS[match.teamA] || ''} {match.teamA} <span style={{ color: 'var(--text-muted)' }}>vs</span> {FLAGS[match.teamB] || ''} {match.teamB}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                    {match.date ? match.date.slice(11, 16) : ''} · {match.venue?.split('(')[1]?.replace(')', '') || ''}
-                  </div>
-                </div>
-                <button
-                  onClick={() => toggleMatch(match)}
-                  disabled={saving[match.id]}
-                  style={{
-                    fontSize: 11, padding: '5px 14px', borderRadius: 20, cursor: 'pointer',
-                    border: 'none', fontWeight: 600, flexShrink: 0, marginLeft: 10,
-                    background: match.isOpen ? '#15803d' : '#e2e8f0',
-                    color: match.isOpen ? '#fff' : '#475569',
-                    opacity: saving[match.id] ? 0.6 : 1,
-                  }}
-                >
-                  {saving[match.id] ? '...' : match.isOpen ? '🟢 Abierto' : 'Cerrado'}
-                </button>
-              </div>
-            ))}
+              {PHASE_LABELS[phase] || phase}
+            </span>
+            <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
           </div>
-        );
-      })}
+
+          {Object.entries(byDay).map(([day, dayMatches]) => {
+            const openCount   = dayMatches.filter(m => m.isOpen).length;
+            const closedCount = dayMatches.filter(m => !m.isOpen).length;
+            const allOpen     = closedCount === 0;
+            const allClosed   = openCount === 0;
+
+            return (
+              <div key={day} style={{ marginBottom: 12 }}>
+                {/* Cabecera del día */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: allOpen ? '#f0fdf4' : allClosed ? '#f8fafc' : '#fefce8',
+                  border: `1px solid ${allOpen ? '#86efac' : allClosed ? 'var(--border)' : '#fde047'}`,
+                  borderRadius: 10, padding: '10px 14px', marginBottom: 8,
+                }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--navy)', textTransform: 'capitalize' }}>
+                      {fmtDay(day)}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                      {openCount > 0 && <span style={{ color: '#15803d', fontWeight: 600 }}>{openCount} abierto{openCount !== 1 ? 's' : ''}</span>}
+                      {openCount > 0 && closedCount > 0 && ' · '}
+                      {closedCount > 0 && <span style={{ color: '#64748b' }}>{closedCount} cerrado{closedCount !== 1 ? 's' : ''}</span>}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {closedCount > 0 && (
+                      <button onClick={() => abrirTodos(dayMatches)} style={{
+                        fontSize: 11, padding: '4px 10px', borderRadius: 20, cursor: 'pointer',
+                        border: 'none', background: '#15803d', color: '#fff', fontWeight: 600,
+                      }}>
+                        Abrir todos
+                      </button>
+                    )}
+                    {openCount > 0 && (
+                      <button onClick={() => cerrarTodos(dayMatches)} style={{
+                        fontSize: 11, padding: '4px 10px', borderRadius: 20, cursor: 'pointer',
+                        border: '1px solid var(--border)', background: '#fff', color: '#64748b', fontWeight: 600,
+                      }}>
+                        Cerrar todos
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Partidos del día */}
+                {dayMatches.map(match => (
+                  <div key={match.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '10px 14px', marginBottom: 6, borderRadius: 8,
+                    background: match.isOpen ? '#f0fdf4' : '#f8fafc',
+                    border: `1px solid ${match.isOpen ? '#86efac' : 'var(--border)'}`,
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--navy)' }}>
+                        {FLAGS[match.teamA] || ''} {match.teamA} <span style={{ color: 'var(--text-muted)' }}>vs</span> {FLAGS[match.teamB] || ''} {match.teamB}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                        {match.date ? match.date.slice(11, 16) : ''} · {match.venue?.split('(')[1]?.replace(')', '') || ''}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => toggleMatch(match)}
+                      disabled={saving[match.id]}
+                      style={{
+                        fontSize: 11, padding: '5px 14px', borderRadius: 20, cursor: 'pointer',
+                        border: 'none', fontWeight: 600, flexShrink: 0, marginLeft: 10,
+                        background: match.isOpen ? '#15803d' : '#e2e8f0',
+                        color: match.isOpen ? '#fff' : '#475569',
+                        opacity: saving[match.id] ? 0.6 : 1,
+                      }}
+                    >
+                      {saving[match.id] ? '...' : match.isOpen ? '🟢 Abierto' : 'Cerrado'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 };
@@ -1648,6 +1799,7 @@ const AdminPage = () => {
         {tab === 'jugadores' && <JugadoresTab />}
         {tab === 'anuncios' && (
           <>
+            <RecalcularStatsButton />
             <GroupPicksToggle />
             <RankingToggle />
             <AnuncioForm />

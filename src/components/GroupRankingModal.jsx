@@ -213,58 +213,65 @@ const GroupRankingModal = ({ currentUserId, onClose }) => {
                         {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
                       </div>
 
-                      {/* Nombre */}
+                      {/* Nombre + puntos obtenidos */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
                           fontSize: 13, fontWeight: isMe ? 700 : 500,
                           color: 'var(--navy)',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap',
                         }}>
-                          {user.displayName || user.email}
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {user.displayName || user.email}
+                          </span>
                           {isMe && (
                             <span style={{
-                              marginLeft: 6, fontSize: 10,
+                              fontSize: 10, flexShrink: 0,
                               background: 'var(--gold)', color: 'var(--navy)',
                               borderRadius: 10, padding: '1px 5px', fontWeight: 700,
                             }}>Tú</span>
                           )}
+                          {hasAdvancing && hasPicks && pts !== null && (
+                            <span style={{
+                              fontSize: 10, flexShrink: 0,
+                              background: pts >= 16 ? '#dcfce7' : pts >= 10 ? '#fef9c3' : '#f1f5f9',
+                              color:      pts >= 16 ? '#15803d' : pts >= 10 ? '#92400e' : '#64748b',
+                              borderRadius: 10, padding: '1px 7px', fontWeight: 700,
+                              border: `1px solid ${pts >= 16 ? '#86efac' : pts >= 10 ? '#fcd34d' : '#e2e8f0'}`,
+                            }}>
+                              {pts} pts
+                            </span>
+                          )}
                         </div>
-                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>
-                          {hasPicks
-                            ? `${submitted}/12 grupos completados`
-                            : 'No ha enviado pronóstico'}
+                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                          {!hasPicks
+                            ? 'No ha enviado pronóstico'
+                            : hasAdvancing && pts !== null
+                              ? `Puntos obtenidos · ${submitted}/12 grupos`
+                              : `${submitted}/12 grupos completados`}
                         </div>
                       </div>
 
-                      {/* Puntos o estado */}
+                      {/* Toggle expandir */}
                       <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                        {hasAdvancing && hasPicks ? (
-                          <div style={{
-                            fontFamily: "'Bebas Neue', sans-serif",
-                            fontSize: 22, color: 'var(--navy)',
-                            lineHeight: 1,
-                          }}>
-                            {pts}
-                            <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 2 }}>/24</span>
-                          </div>
-                        ) : hasPicks ? (
-                          <span style={{
-                            fontSize: 11, fontWeight: 600,
-                            background: submitted === 12 ? '#dcfce7' : '#f1f5f9',
-                            color: submitted === 12 ? '#15803d' : '#64748b',
-                            borderRadius: 20, padding: '3px 8px',
-                          }}>
-                            {submitted === 12 ? '✓ Listo' : `${submitted * 2}/24`}
-                          </span>
+                        {!hasPicks ? (
+                          <span style={{ fontSize: 11, color: '#cbd5e1', fontStyle: 'italic' }}>—</span>
                         ) : (
-                          <span style={{ fontSize: 11, color: '#cbd5e1', fontStyle: 'italic' }}>
-                            —
-                          </span>
-                        )}
-                        {hasPicks && (
-                          <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
-                            {isExpanded ? '▲ ocultar' : '▼ ver picks'}
-                          </div>
+                          <>
+                            {!hasAdvancing && (
+                              <span style={{
+                                fontSize: 11, fontWeight: 600,
+                                background: submitted === 12 ? '#dcfce7' : '#f1f5f9',
+                                color: submitted === 12 ? '#15803d' : '#64748b',
+                                borderRadius: 20, padding: '3px 8px', display: 'block', marginBottom: 2,
+                              }}>
+                                {submitted === 12 ? '✓ Listo' : `${submitted * 2}/24`}
+                              </span>
+                            )}
+                            <div style={{ fontSize: 10, color: '#94a3b8' }}>
+                              {isExpanded ? '▲ ocultar' : '▼ ver picks'}
+                            </div>
+                          </>
                         )}
                       </div>
                     </div>
@@ -285,13 +292,22 @@ const GroupRankingModal = ({ currentUserId, onClose }) => {
                             const sel = picks[g] || [];
                             const isDone = sel.length === 2;
                             const adv = advancing[g] || [];
+                            const correctInGroup = hasAdvancing ? sel.filter(t => adv.includes(t)).length : 0;
+                            const groupCardBg = !hasAdvancing ? '#fff'
+                              : correctInGroup === 2 ? '#f0fdf4'
+                              : correctInGroup === 1 ? '#fefce8'
+                              : '#fff';
+                            const groupCardBorder = !hasAdvancing ? 'var(--border)'
+                              : correctInGroup === 2 ? '#86efac'
+                              : correctInGroup === 1 ? '#fcd34d'
+                              : 'var(--border)';
                             return (
                               <div
                                 key={g}
                                 style={{
-                                  border: '1px solid var(--border)',
+                                  border: `1px solid ${groupCardBorder}`,
                                   borderRadius: 8, padding: '7px 8px',
-                                  background: '#fff',
+                                  background: groupCardBg,
                                 }}
                               >
                                 <div style={{
@@ -303,11 +319,14 @@ const GroupRankingModal = ({ currentUserId, onClose }) => {
                                 </div>
                                 {isDone ? sel.map(t => {
                                   const isCorrect = hasAdvancing && adv.includes(t);
-                                  const isWrong = hasAdvancing && !adv.includes(t);
+                                  const isWrong   = hasAdvancing && !adv.includes(t);
                                   return (
                                     <div key={t} style={{
                                       display: 'flex', alignItems: 'center', gap: 4,
                                       marginBottom: 3,
+                                      padding: '2px 4px',
+                                      borderRadius: 4,
+                                      background: isCorrect ? '#dcfce7' : isWrong ? '#fee2e2' : 'transparent',
                                     }}>
                                       <FlagImgTiny team={t} />
                                       <span style={{
@@ -315,12 +334,16 @@ const GroupRankingModal = ({ currentUserId, onClose }) => {
                                         color: isCorrect ? '#15803d' : isWrong ? '#991b1b' : '#475569',
                                         fontWeight: isCorrect ? 700 : 400,
                                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                        maxWidth: 68,
+                                        maxWidth: 60,
                                       }}>
                                         {t}
                                       </span>
-                                      {isCorrect && <span style={{ fontSize: 9 }}>✓</span>}
-                                      {isWrong   && <span style={{ fontSize: 9 }}>✗</span>}
+                                      {isCorrect && (
+                                        <span style={{ fontSize: 11, color: '#15803d', fontWeight: 700, flexShrink: 0 }}>✓</span>
+                                      )}
+                                      {isWrong && (
+                                        <span style={{ fontSize: 11, color: '#991b1b', flexShrink: 0 }}>✗</span>
+                                      )}
                                     </div>
                                   );
                                 }) : (

@@ -6,7 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "import-matches": "node scripts/importMatches.mjs",
+    "test:create-users": "node scripts/createTestUsers.mjs",
+    "test:create-users-20": "node scripts/createTestUsers.mjs",
+    "test:create-users-30": "node scripts/createTestUsers.mjs -- 30",
+    "test:simulate": "node scripts/submitTestPredictions.mjs",
+    "test:group-picks": "node scripts/submitGroupPredictions.mjs",
+    "test:advance": "node scripts/advancePhase.mjs",
+    "test:cleanup": "node scripts/cleanupTest.mjs",
+    "test:cleanup-dry": "node scripts/cleanupTest.mjs --dry-run"
   },
   "dependencies": {
     "firebase": "^10.7.0",
