@@ -19,8 +19,7 @@ const BIENVENIDA = {
   subtitulo: 'Compite, predice y participa por grandes premios durante todo el torneo',
   texto:
     'Participa en una competencia de predicciones basada en los partidos del Mundial 2026.\n' +
-    'Acumula puntos jornada a jornada y compite contra otros jugadores por los primeros lugares.\n\n' +
-    'Mientras mejores sean tus predicciones, mayores serán tus posibilidades de ganar.',
+    'Acumula puntos jornada a jornada y compite por los primeros lugares.',
 };
 
 // =============================================================================
