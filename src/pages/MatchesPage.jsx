@@ -892,9 +892,9 @@ const MatchesPage = () => {
         padding: 4, marginBottom: 7, gap: 0,
       }}>
         {[
-          { key: 'open',   label: 'Abiertos', icon: '⏰' },
-          { key: 'live',   label: 'En Vivo',   icon: '🔴' },
-          { key: 'played', label: 'Jugados',   icon: '✅' },
+          { key: 'open',   label: 'Abiertos', icon: '○' },
+          { key: 'live',   label: 'En Vivo',   icon: '●' },
+          { key: 'played', label: 'Jugados',   icon: '✓' },
         ].map((f, i, arr) => (
           <button
             key={f.key}
@@ -914,7 +914,7 @@ const MatchesPage = () => {
               boxShadow: filter === f.key ? '0 1px 4px rgba(0,0,0,0.18)' : 'none',
             }}
           >
-            <span style={{ fontSize: 13 }}>{f.icon}</span>
+            <span style={{ fontSize: 11, lineHeight: 1 }}>{f.icon}</span>
             {f.label}
           </button>
         ))}
