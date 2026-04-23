@@ -244,9 +244,9 @@ const CommunityPicks = ({ match, userId, allUsers, show, onToggle, preds, setPre
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         }}
       >
-        {show ? '▲ Ocultar picks' : hasResult
+        {show ? '▲ Ocultar Predicciones' : hasResult
           ? `👥 Ver picks de todos · ${correctCount} acertaron`
-          : `📊 Ver distribución`}
+          : `📊 Ver Predicciones`}
       </button>
 
       {show && (
@@ -686,9 +686,6 @@ const PicksAccordion = ({ picksByPhase, totalPicks }) => {
 
   return (
     <>
-      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center' }}>
-        {totalPicks} predicción{totalPicks !== 1 ? 'es' : ''} guardada{totalPicks !== 1 ? 's' : ''}
-      </div>
 
       {Object.entries(picksByPhase).map(([phase, picks]) => {
         const isOpen = openPhases[phase] === true;
@@ -840,7 +837,7 @@ const MatchesPage = () => {
 
   const filtered = matches.filter(m => {
     if (filter === 'open') return m.isOpen && !m.result;
-    if (filter === 'closed') return !m.isOpen && !m.result;
+    if (filter === 'live') return !m.isOpen && !m.result && userPredictions.some(p => p.matchId === m.id);
     if (filter === 'played') return !!m.result;
     return true;
   });
@@ -875,66 +872,84 @@ const MatchesPage = () => {
       <div className="stats-row">
         <div className="stat-box">
           <div className="stat-box-num">{userPoints.total}</div>
-          <div className="stat-box-label">Mis puntos</div>
+          <div className="stat-box-label">Puntaje Total</div>
         </div>
         <div className="stat-box">
           <div className="stat-box-num">{userPoints.correct}</div>
-          <div className="stat-box-label" style={{ textAlign: 'center', lineHeight: 1.3 }}>
-            Total Aciertos<br />de 3pts
-          </div>
+          <div className="stat-box-label">Aciertos de 3pts</div>
         </div>
         <div className="stat-box">
           <div className="stat-box-num">{userPoints.exact}</div>
-          <div className="stat-box-label" style={{ textAlign: 'center', lineHeight: 1.3 }}>
-            Total Aciertos<br />de 5pts
-          </div>
+          <div className="stat-box-label">Aciertos de 5pts</div>
         </div>
       </div>
 
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 0, overflowX: 'auto', paddingBottom: 4 }}>
+      {/* Fila 1: segmented control — Abiertos / En Vivo / Jugados */}
+      <div style={{
+        display: 'flex', width: '100%',
+        background: '#f1f5f9', borderRadius: 14,
+        padding: 4, marginBottom: 7, gap: 0,
+      }}>
         {[
-          { key: 'open',     label: 'Abiertos' },
-          { key: 'closed',   label: 'Por jugar' },
-          { key: 'played',   label: 'Jugados' },
-          { key: 'all',      label: 'Todos' },
-          { key: 'mispicks', label: '🧾 Mis Picks' },
-        ].map(f => (
+          { key: 'open',   label: 'Abiertos', icon: '⏰' },
+          { key: 'live',   label: 'En Vivo',   icon: '🔴' },
+          { key: 'played', label: 'Jugados',   icon: '✅' },
+        ].map((f, i, arr) => (
           <button
             key={f.key}
             onClick={() => { setFilter(f.key); setOpenDays({}); setOpenPhases({}); }}
             style={{
-              padding: '5px 14px',
-              borderRadius: 20,
-              border: '1px solid var(--border)',
-              background: filter === f.key ? 'var(--navy)' : 'var(--bg)',
+              flex: 1,
+              padding: '8px 6px',
+              borderRadius: 10,
+              border: 'none',
+              background: filter === f.key ? 'var(--navy)' : 'transparent',
               color: filter === f.key ? '#fff' : 'var(--text-mid)',
-              fontSize: 12,
+              fontSize: 12, fontWeight: filter === f.key ? 600 : 400,
               fontFamily: "'DM Sans', sans-serif",
               cursor: 'pointer',
-              whiteSpace: 'nowrap',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              transition: 'background 0.15s',
+              boxShadow: filter === f.key ? '0 1px 4px rgba(0,0,0,0.18)' : 'none',
             }}
           >
+            <span style={{ fontSize: 13 }}>{f.icon}</span>
             {f.label}
           </button>
         ))}
       </div>
 
-      {/* Descripción del filtro activo */}
-      {(() => {
-        const desc = {
-          open:     'Partidos disponibles para ingresar o modificar tu predicción.',
-          closed:   'Partidos próximos cuyo plazo de predicción aún no ha abierto.',
-          played:   'Partidos ya disputados — ve cuántos puntos obtuviste.',
-          all:      'Todos los partidos del torneo, sin importar su estado.',
-          mispicks: 'Registro de todas tus predicciones guardadas con fecha y hora.',
-        }[filter];
-        return desc ? (
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: 12, marginTop: 6, paddingLeft: 2 }}>
-            {desc}
-          </div>
-        ) : null;
-      })()}
+      {/* Fila 2: Ver Calendario + Mis Predicciones */}
+      <div style={{ display: 'flex', width: '100%', gap: 8, marginBottom: 7 }}>
+        {[
+          { key: 'all',      label: 'Ver Calendario',    icon: '📆' },
+          { key: 'mispicks', label: 'Mis Predicciones',  icon: '🧾' },
+        ].map(f => (
+          <button
+            key={f.key}
+            onClick={() => { setFilter(f.key); setOpenDays({}); setOpenPhases({}); }}
+            style={{
+              flex: 1,
+              padding: '9px 10px',
+              borderRadius: 12,
+              border: `1.5px solid ${filter === f.key ? 'var(--navy)' : 'var(--border)'}`,
+              background: filter === f.key ? 'var(--navy)' : '#fff',
+              color: filter === f.key ? '#fff' : 'var(--text-mid)',
+              fontSize: 12, fontWeight: filter === f.key ? 600 : 400,
+              fontFamily: "'DM Sans', sans-serif",
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              transition: 'background 0.15s',
+            }}
+          >
+            <span style={{ fontSize: 14 }}>{f.icon}</span>
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ marginBottom: 7 }} />
 
       {/* Vista "Mis Picks" — acordeón por fase */}
       {filter === 'mispicks' && (() => {
@@ -964,8 +979,33 @@ const MatchesPage = () => {
         );
       })()}
 
+      {/* Vista En Vivo — lista plana, solo partidos cerrados con predicción del jugador */}
+      {filter === 'live' && !loading && (
+        <>
+          {filtered.length === 0 ? (
+            <div className="text-center text-muted" style={{ marginTop: 40 }}>
+              No hay partidos jugándose en este momento
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {filtered
+                .sort((a, b) => (a.date > b.date ? 1 : -1))
+                .map(match => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    userId={user?.uid}
+                    allUsers={allUsers}
+                    userPrediction={userPredictions.find(p => p.matchId === match.id) || null}
+                  />
+                ))}
+            </div>
+          )}
+        </>
+      )}
+
       {/* Vista normal de partidos — por fase → acordeón por fecha */}
-      {filter !== 'mispicks' && (
+      {filter !== 'mispicks' && filter !== 'live' && (
         <>
           {loading && <div className="page-loading"><div className="spinner" /></div>}
           {!loading && Object.keys(groupedByPhase).length === 0 && (
