@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { doc, onSnapshot, collection, getDocs } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import MundialFormatoModal from '../components/MundialFormatoModal';
 import GroupPicksModal from '../components/GroupPicksModal';
@@ -119,7 +119,6 @@ const RulesPage = () => {
   const [showGroupPicks, setShowGroupPicks] = useState(false);
   const [showGroupRanking, setShowGroupRanking] = useState(false);
   const [groupPicksOpen, setGroupPicksOpen] = useState(false);
-  const [userRank, setUserRank] = useState(null);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'config', 'groupPicks'), snap => {
@@ -128,17 +127,6 @@ const RulesPage = () => {
     return unsub;
   }, []);
 
-  // Calcular puesto del usuario en el ranking
-  useEffect(() => {
-    if (!user || !userProfile) return;
-    const calcRank = async () => {
-      const snap = await getDocs(collection(db, 'users'));
-      const pts = userProfile.totalPoints || 0;
-      const above = snap.docs.filter(d => (d.data().totalPoints || 0) > pts).length;
-      setUserRank(above + 1);
-    };
-    calcRank();
-  }, [user, userProfile?.totalPoints]);
 
   const handleLogout = async () => {
     await logout();
@@ -175,8 +163,8 @@ const RulesPage = () => {
             </div>
           </div>
 
-          {/* Badge ranking */}
-          {userRank && (
+          {/* Badge puntos acumulados */}
+          {(userProfile?.totalPoints > 0) && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: 4,
               background: '#e0f2fe', borderRadius: 20,
@@ -184,7 +172,7 @@ const RulesPage = () => {
             }}>
               <span style={{ fontSize: 13 }}>🏅</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#0369a1' }}>
-                #{userRank} Ranking
+                {userProfile.totalPoints} pts
               </span>
             </div>
           )}

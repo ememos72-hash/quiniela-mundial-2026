@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  collection, query, orderBy, onSnapshot, getDocs
+  collection, query, orderBy, onSnapshot, getDocs, where
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { format, parseISO, isAfter, isBefore } from 'date-fns';
@@ -37,18 +37,25 @@ const calcRanking = async (flash, matches) => {
 
   if (flashMatchIds.size === 0) return { ranking: [], matchCount: 0 };
 
-  // Load all predictions and users in parallel
-  const [predsSnap, usersSnap] = await Promise.all([
-    getDocs(collection(db, 'predictions')),
+  // ⚡ Solo leer predicciones de los partidos del flash (no toda la colección)
+  const matchIdArray = Array.from(flashMatchIds);
+  const chunks = [];
+  for (let i = 0; i < matchIdArray.length; i += 30) chunks.push(matchIdArray.slice(i, i + 30));
+
+  const [predsSnaps, usersSnap] = await Promise.all([
+    Promise.all(chunks.map(chunk =>
+      getDocs(query(collection(db, 'predictions'), where('matchId', 'in', chunk)))
+    )),
     getDocs(collection(db, 'users')),
   ]);
+  const allPredsDocs = predsSnaps.flatMap(s => s.docs);
 
   const usersMap = {};
   usersSnap.docs.forEach(d => { usersMap[d.id] = d.data(); });
 
   // Sum points per user for flash matches only
   const byUser = {};
-  predsSnap.docs.forEach(d => {
+  allPredsDocs.forEach(d => {
     const p = d.data();
     if (!flashMatchIds.has(p.matchId)) return;
     if (!byUser[p.userId]) byUser[p.userId] = { points: 0, correct: 0 };
@@ -300,9 +307,10 @@ const FlashPage = () => {
     });
   }, []);
 
+  // ⚡ getDocs — los partidos no cambian mientras el usuario ve la página
   useEffect(() => {
     const q = query(collection(db, 'matches'), orderBy('date', 'asc'));
-    return onSnapshot(q, snap => {
+    getDocs(q).then(snap => {
       setMatches(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
   }, []);

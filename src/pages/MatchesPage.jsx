@@ -784,16 +784,18 @@ const MatchesPage = () => {
   const [showGroupRanking, setShowGroupRanking] = useState(false);
 
   useEffect(() => {
+    // ⚡ getDocs (lectura única) — los partidos solo cambian cuando el admin actúa
     const q = query(collection(db, 'matches'), orderBy('date', 'asc'));
-    const unsub = onSnapshot(q, snap => {
-      setMatches(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setLoading(false);
-    }, err => {
-      console.error('Error cargando partidos:', err);
-      setError('Error al cargar los partidos. Recarga la página.');
-      setLoading(false);
-    });
-    return unsub;
+    getDocs(q)
+      .then(snap => {
+        setMatches(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error cargando partidos:', err);
+        setError('Error al cargar los partidos. Recarga la página.');
+        setLoading(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -821,10 +823,10 @@ const MatchesPage = () => {
     });
   }, [user]);
 
-  // Cargar todos los usuarios (para picks comunitarios)
+  // Cargar todos los usuarios (para picks comunitarios) — lectura única
   useEffect(() => {
     const q = query(collection(db, 'users'), orderBy('displayName', 'asc'));
-    return onSnapshot(q, snap => {
+    getDocs(q).then(snap => {
       setAllUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
   }, []);
