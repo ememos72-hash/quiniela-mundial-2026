@@ -781,18 +781,20 @@ const MatchesPage = () => {
   const [showGroupRanking, setShowGroupRanking] = useState(false);
 
   useEffect(() => {
-    // ⚡ getDocs (lectura única) — los partidos solo cambian cuando el admin actúa
+    // ⚡ onSnapshot — tiempo real para Abiertos / En Vivo / Jugados
     const q = query(collection(db, 'matches'), orderBy('date', 'asc'));
-    getDocs(q)
-      .then(snap => {
+    const unsub = onSnapshot(q,
+      snap => {
         setMatches(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         setLoading(false);
-      })
-      .catch(err => {
+      },
+      err => {
         console.error('Error cargando partidos:', err);
         setError('Error al cargar los partidos. Recarga la página.');
         setLoading(false);
-      });
+      }
+    );
+    return unsub;
   }, []);
 
   useEffect(() => {

@@ -144,7 +144,7 @@ const PremioModal = ({ onClose }) => {
             padding: '8px 12px',
             marginBottom: 20,
           }}>
-            El número de posiciones premiadas se define según la participación total — aproximadamente el 10% de los jugadores entrará a premios. Entre más jugadores se inscriban, más posiciones se premian. Con 60 participantes se premian los 6 primeros; con 80 o más, hasta el 8vo lugar.
+            El número de posiciones premiadas se define según la participación total — aproximadamente el 10% de los jugadores entrará a premios.
           </div>
 
           {/* Premios */}

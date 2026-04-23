@@ -48,7 +48,6 @@ const ANUNCIOS = [
     link: 'https://chat.whatsapp.com/KjNRd3vzKT2CdniFVdLG36',
     linkLabel: 'Unirme al grupo de WhatsApp',
     imagen: 'https://i.postimg.cc/fyY0Q394/Laquiniela-01.png',
-    fecha: '16 Abr 2026',
   },
   // --- Agrega más anuncios aquí arriba (copia el bloque de arriba) ---
  //{
@@ -378,11 +377,6 @@ const InicioPage = () => {
                 </a>
               )}
 
-              {anuncio.fecha && (
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
-                  {anuncio.fecha}
-                </div>
-              )}
             </div>
           </div>
         );
