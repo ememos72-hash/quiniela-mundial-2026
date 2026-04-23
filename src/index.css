@@ -74,7 +74,7 @@ h1, h2, h3, h4 {
 }
 
 .header-logo-sub {
-  font-size: 11px;
+  font-size: 9px;
   color: var(--gold-light);
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -569,7 +569,7 @@ h1, h2, h3, h4 {
 }
 
 .auth-logo-sub {
-  font-size: 12px;
+  font-size: 10px;
   color: rgba(255,255,255,0.5);
   letter-spacing: 0.14em;
   text-transform: uppercase;
