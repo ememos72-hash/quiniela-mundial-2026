@@ -3,6 +3,7 @@ import {
   collection, query, orderBy, onSnapshot, getDocs, where
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { ADMIN_UID } from '../contexts/AuthContext';
 import { format, parseISO, isAfter, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -51,7 +52,9 @@ const calcRanking = async (flash, matches) => {
   const allPredsDocs = predsSnaps.flatMap(s => s.docs);
 
   const usersMap = {};
-  usersSnap.docs.forEach(d => { usersMap[d.id] = d.data(); });
+  usersSnap.docs.forEach(d => {
+    if (d.id !== ADMIN_UID) usersMap[d.id] = d.data();
+  });
 
   // Sum points per user for flash matches only
   const byUser = {};

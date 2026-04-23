@@ -4,7 +4,7 @@ import {
   doc, setDoc, getDoc, where, getDocs
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, ADMIN_UID } from '../contexts/AuthContext';
 import { FLAGS, COUNTRY_CODES, EXACT_SCORE_PHASES, PHASE_LABELS } from '../data/worldCupData';
 import GroupPicksModal from '../components/GroupPicksModal';
 import GroupRankingModal from '../components/GroupRankingModal';
@@ -824,7 +824,7 @@ const MatchesPage = () => {
   useEffect(() => {
     const q = query(collection(db, 'users'), orderBy('displayName', 'asc'));
     getDocs(q).then(snap => {
-      setAllUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setAllUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.id !== ADMIN_UID));
     });
   }, []);
 

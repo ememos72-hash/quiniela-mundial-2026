@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { collection, getDocs, doc, getDoc, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { GROUPS, COUNTRY_CODES, FLAGS } from '../data/worldCupData';
+import { ADMIN_UID } from '../contexts/AuthContext';
 
 const groupKeys = Object.keys(GROUPS);
 
@@ -45,7 +46,9 @@ const GroupRankingModal = ({ currentUserId, onClose }) => {
       try {
         // 1. Usuarios
         const usersSnap = await getDocs(query(collection(db, 'users'), orderBy('displayName', 'asc')));
-        const usersData = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const usersData = usersSnap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(d => d.id !== ADMIN_UID);
 
         // 2. Todos los pronósticos de grupos
         const picksSnap = await getDocs(collection(db, 'groupPredictions'));

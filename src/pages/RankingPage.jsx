@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, ADMIN_UID } from '../contexts/AuthContext';
 import { getInitials } from '../utils/points';
 import GroupRankingModal from '../components/GroupRankingModal';
 
@@ -26,7 +26,9 @@ const RankingPage = () => {
       orderBy('totalPoints', 'desc')
     );
     const unsub = onSnapshot(q, snap => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const data = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(d => d.id !== ADMIN_UID);
       // Ordenar por teamAdvances como desempate en el cliente
       data.sort((a, b) => {
         if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
