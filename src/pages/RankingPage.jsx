@@ -89,7 +89,7 @@ const RankingPage = () => {
             whiteSpace: 'nowrap', flexShrink: 0,
           }}
         >
-          Números para Desempatar
+          Puntaje de Desempate
         </button>
       </div>
 
