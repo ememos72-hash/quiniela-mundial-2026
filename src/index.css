@@ -340,13 +340,13 @@ h1, h2, h3, h4 {
 }
 
 .score-step-btn {
-  width: 38px;
-  height: 38px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: rgba(255,255,255,0.06);
   border: 1.5px solid var(--gold);
   color: var(--gold);
-  font-size: 22px;
+  font-size: 17px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -359,10 +359,10 @@ h1, h2, h3, h4 {
 .score-step-btn:active { background: rgba(201,149,10,0.2); }
 
 .score-step-num {
-  font-size: 52px;
+  font-size: 38px;
   font-weight: 700;
   color: #fff;
-  min-width: 46px;
+  min-width: 34px;
   text-align: center;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -371,14 +371,14 @@ h1, h2, h3, h4 {
 
 .score-step-num.empty {
   color: rgba(255,255,255,0.18);
-  font-size: 42px;
+  font-size: 34px;
 }
 
 .score-stepper-dash {
-  font-size: 28px;
+  font-size: 18px;
   font-weight: 700;
   color: rgba(201,149,10,0.3);
-  margin-top: 22px;
+  margin-top: 16px;
   font-family: 'Bebas Neue', sans-serif;
 }
 

@@ -388,7 +388,7 @@ const MatchCountdown = ({ date }) => {
   );
 };
 
-const MatchCard = ({ match, userId, allUsers, userPrediction, hideCommunityPicks = false, hideStatus = false }) => {
+const MatchCard = ({ match, userId, allUsers, userPrediction, hideCommunityPicks = false, hideStatus = false, hideInteraction = false }) => {
   const [prediction, setPrediction] = useState(null);
   const [localPred, setLocalPred]   = useState(null);
   const [scoreA, setScoreA]         = useState(null);
@@ -488,14 +488,14 @@ const MatchCard = ({ match, userId, allUsers, userPrediction, hideCommunityPicks
       </div>
 
       {/* Countdown — solo partidos abiertos que aún no empiezan */}
-      {match.isOpen && !match.result && match.date && (
+      {!hideInteraction && match.isOpen && !match.result && match.date && (
         <div style={{ textAlign: 'center' }}>
           <MatchCountdown date={match.date} />
         </div>
       )}
 
       {/* Prediction buttons — only if open */}
-      {match.isOpen && !match.result && (
+      {!hideInteraction && match.isOpen && !match.result && (
         <>
           <div className="pred-row">
             <button
@@ -1102,6 +1102,7 @@ const MatchesPage = () => {
                                   userPrediction={userPredictions.find(p => p.matchId === match.id) || null}
                                   hideCommunityPicks={filter === 'all'}
                                   hideStatus={filter === 'all'}
+                                  hideInteraction={filter === 'all'}
                                 />
                               ))}
                             </div>
