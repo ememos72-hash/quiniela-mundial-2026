@@ -388,7 +388,7 @@ const MatchCountdown = ({ date }) => {
   );
 };
 
-const MatchCard = ({ match, userId, allUsers, userPrediction }) => {
+const MatchCard = ({ match, userId, allUsers, userPrediction, hideCommunityPicks = false, hideStatus = false }) => {
   const [prediction, setPrediction] = useState(null);
   const [localPred, setLocalPred]   = useState(null);
   const [scoreA, setScoreA]         = useState(null);
@@ -464,12 +464,12 @@ const MatchCard = ({ match, userId, allUsers, userPrediction }) => {
             </span>
           )}
         </div>
-        {match.result
+        {!hideStatus && (match.result
           ? <span className="badge-played">Finalizado</span>
           : match.isOpen
             ? <span className="badge-open">Abierto</span>
             : <span className="badge-closed">Cerrado</span>
-        }
+        )}
       </div>
 
       <div className="teams-row">
@@ -661,8 +661,8 @@ const MatchCard = ({ match, userId, allUsers, userPrediction }) => {
         </div>
       )}
 
-      {/* ── Picks comunitarios (solo partidos cerrados o jugados) ── */}
-      {!match.isOpen && (
+      {/* ── Picks comunitarios (abiertos, en vivo y jugados — no en Ver Calendario) ── */}
+      {!hideCommunityPicks && (
         <CommunityPicks
           match={match}
           userId={userId}
@@ -1100,6 +1100,8 @@ const MatchesPage = () => {
                                   userId={user?.uid}
                                   allUsers={allUsers}
                                   userPrediction={userPredictions.find(p => p.matchId === match.id) || null}
+                                  hideCommunityPicks={filter === 'all'}
+                                  hideStatus={filter === 'all'}
                                 />
                               ))}
                             </div>
