@@ -1,15 +1,12 @@
-// 🔥 CONFIGURACIÓN DE FIREBASE
-// Reemplaza estos valores con los de tu proyecto Firebase
-// Ve a: https://console.firebase.google.com → Tu proyecto → Configuración → Tus apps
-
+// 🔥 CONFIGURACIÓN DE FIREBASE — valores desde variables de entorno
 const firebaseConfig = {
-  apiKey: "AIzaSyCKRERWLV1ZX1uEGQB006c02S3chuJVSdo",
-  authDomain: "quiniela---mundial-2026.firebaseapp.com",
-  projectId: "quiniela---mundial-2026",
-  storageBucket: "quiniela---mundial-2026.firebasestorage.app",
-  messagingSenderId: "735911362707",
-  appId: "1:735911362707:web:eaf12c2871b1cb09f20d66",
-  measurementId: "G-RXG9GSTBRR"
+  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_ID,
+  appId:             import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 export default firebaseConfig;
