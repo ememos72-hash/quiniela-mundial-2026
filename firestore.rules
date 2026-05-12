@@ -56,5 +56,26 @@ service cloud.firestore {
       allow create, update: if request.auth != null && request.auth.uid == userId;
       allow delete: if isAdmin();
     }
+
+    // Liga CR/MX — Partidos: todos pueden leer, solo admin escribe
+    match /flashMatches/{matchId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // Liga CR/MX — Predicciones: autenticados con flashAccess pueden leer/escribir las suyas
+    match /flashPredictions/{predId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null &&
+        (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Liga CR/MX — Solicitudes de acceso: cada jugador crea/lee la suya, admin lee todas
+    match /flashAccessRequests/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if isAdmin();
+    }
   }
 }

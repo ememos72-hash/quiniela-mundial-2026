@@ -7,6 +7,7 @@ import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { PHASES, PHASE_LABELS, FLAGS, GROUPS } from '../data/worldCupData';
+import { LIGA_TEAMS } from '../data/ligaData';
 import { calculatePredictionPoints } from '../utils/points';
 
 // --- Helper: recalcular puntos de usuarios afectados por un partido ---
@@ -59,6 +60,20 @@ const recalcularPuntos = async (matchId, matchConResultado) => {
       exactScores: exact,
     }, { merge: true });
   }
+};
+
+// --- recalcularPuntosLiga: solo actualiza flashPredictions, NO toca users.totalPoints ---
+const recalcularPuntosLiga = async (matchId, matchConResultado) => {
+  const predsSnap = await getDocs(
+    query(collection(db, 'flashPredictions'), where('matchId', '==', matchId))
+  );
+  if (predsSnap.empty) return;
+  const batch = writeBatch(db);
+  for (const predDoc of predsSnap.docs) {
+    const pts = calculatePredictionPoints(predDoc.data(), matchConResultado);
+    batch.update(predDoc.ref, { pointsAwarded: pts });
+  }
+  await batch.commit();
 };
 
 // --- Add Match Form ---
@@ -1730,12 +1745,424 @@ const AbrirPartidosTab = ({ matches }) => {
   );
 };
 
+// ─── Liga CR/MX Admin ────────────────────────────────────────────────────────
+
+// --- Liga: Agregar partido ---
+const LigaAddMatchForm = () => {
+  const crTeams = Object.keys(LIGA_TEAMS).filter(t => LIGA_TEAMS[t].league === 'CR');
+  const mxTeams = Object.keys(LIGA_TEAMS).filter(t => LIGA_TEAMS[t].league === 'MX');
+  const allTeams = Object.keys(LIGA_TEAMS);
+  const [form, setForm] = useState({ teamA: allTeams[0], teamB: allTeams[1], date: '', isOpen: true });
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!form.teamA || !form.teamB || !form.date) return alert('Completa todos los campos');
+    if (form.teamA === form.teamB) return alert('Los equipos deben ser diferentes');
+    const leagueA = LIGA_TEAMS[form.teamA]?.league;
+    const leagueB = LIGA_TEAMS[form.teamB]?.league;
+    if (leagueA !== leagueB) return alert('Los equipos deben ser de la misma liga (CR o MX)');
+    setSaving(true);
+    try {
+      await addDoc(collection(db, 'flashMatches'), {
+        teamA: form.teamA, teamB: form.teamB,
+        league: leagueA, date: form.date,
+        isOpen: form.isOpen, result: null, createdAt: serverTimestamp(),
+      });
+      setForm(f => ({ ...f, teamA: allTeams[0], teamB: allTeams[1], date: '' }));
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="admin-section">
+      <div className="admin-section-title">➕ Agregar Partido Liga</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div className="form-group">
+          <label className="form-label">Equipo A</label>
+          <select className="form-input" value={form.teamA} onChange={e => setForm(f => ({ ...f, teamA: e.target.value }))}>
+            <optgroup label="🇨🇷 Costa Rica">{crTeams.map(t => <option key={t} value={t}>{t}</option>)}</optgroup>
+            <optgroup label="🇲🇽 México">{mxTeams.map(t => <option key={t} value={t}>{t}</option>)}</optgroup>
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Equipo B</label>
+          <select className="form-input" value={form.teamB} onChange={e => setForm(f => ({ ...f, teamB: e.target.value }))}>
+            <optgroup label="🇨🇷 Costa Rica">{crTeams.filter(t => t !== form.teamA).map(t => <option key={t} value={t}>{t}</option>)}</optgroup>
+            <optgroup label="🇲🇽 México">{mxTeams.filter(t => t !== form.teamA).map(t => <option key={t} value={t}>{t}</option>)}</optgroup>
+          </select>
+        </div>
+      </div>
+      <div className="form-group">
+        <label className="form-label">Fecha y hora</label>
+        <input className="form-input" type="datetime-local" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+      </div>
+      <div className="form-group">
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+          <input type="checkbox" checked={form.isOpen} onChange={e => setForm(f => ({ ...f, isOpen: e.target.checked }))} />
+          <span className="form-label" style={{ margin: 0 }}>Abierto para predicciones</span>
+        </label>
+      </div>
+      <button className="primary-btn gold-btn" onClick={save} disabled={saving}>
+        {saving ? 'Guardando...' : 'Agregar Partido'}
+      </button>
+    </div>
+  );
+};
+
+// --- Liga: Entrada de resultado ---
+const LigaMatchResultEntry = ({ match }) => {
+  const [scoreA, setScoreA] = useState(match.result?.teamAScore ?? '');
+  const [scoreB, setScoreB] = useState(match.result?.teamBScore ?? '');
+  const [isOpen, setIsOpen] = useState(match.isOpen);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const getWinner = (a, b) => a > b ? 'teamA' : b > a ? 'teamB' : 'draw';
+  const flag = match.league === 'CR' ? '🇨🇷' : '🇲🇽';
+
+  const saveResult = async () => {
+    if (scoreA === '' || scoreB === '') return;
+    setSaving(true); setMsg('');
+    try {
+      const a = parseInt(scoreA), b = parseInt(scoreB);
+      const result = { teamAScore: a, teamBScore: b, winner: getWinner(a, b) };
+      await updateDoc(doc(db, 'flashMatches', match.id), { result, isOpen: false });
+      await recalcularPuntosLiga(match.id, { ...match, result });
+      setMsg('✓ Resultado guardado y puntos actualizados');
+    } catch (e) { setMsg('Error: ' + e.message); } finally { setSaving(false); }
+  };
+
+  const toggleOpen = async () => {
+    const nv = !isOpen; setIsOpen(nv);
+    await updateDoc(doc(db, 'flashMatches', match.id), { isOpen: nv });
+  };
+
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 12, marginBottom: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <div style={{ fontWeight: 500, fontSize: 13 }}>{flag} {match.teamA} vs {match.teamB}</div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button onClick={toggleOpen} style={{ fontSize: 11, padding: '2px 10px', borderRadius: 20, cursor: 'pointer', border: 'none', background: isOpen ? 'var(--green-pale)' : '#fee2e2', color: isOpen ? '#15803d' : '#991b1b', fontFamily: "'DM Sans', sans-serif" }}>
+            {isOpen ? 'Abierto' : 'Cerrado'}
+          </button>
+          <button onClick={async () => { if (window.confirm(`¿Eliminar ${match.teamA} vs ${match.teamB}?`)) await deleteDoc(doc(db, 'flashMatches', match.id)); }} style={{ fontSize: 14, padding: '2px 8px', borderRadius: 20, cursor: 'pointer', border: 'none', background: '#fee2e2', color: '#991b1b' }}>🗑️</button>
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <input className="score-input" type="number" min="0" max="20" value={scoreA} onChange={e => setScoreA(e.target.value)} placeholder="0" />
+        <span className="score-dash">-</span>
+        <input className="score-input" type="number" min="0" max="20" value={scoreB} onChange={e => setScoreB(e.target.value)} placeholder="0" />
+        <button onClick={saveResult} disabled={saving || scoreA === '' || scoreB === ''} style={{ flex: 1, padding: '8px 12px', background: 'var(--navy)', color: '#fff', border: 'none', borderRadius: 8, fontFamily: "'Bebas Neue', sans-serif", fontSize: 15, cursor: 'pointer' }}>
+          {saving ? '...' : 'Guardar'}
+        </button>
+      </div>
+      {msg && <div style={{ fontSize: 12, color: 'var(--green)', marginTop: 6, fontWeight: 500 }}>{msg}</div>}
+    </div>
+  );
+};
+
+// --- Liga: Fila de partido ya con resultado (editable) ---
+const LigaCompletedMatchRow = ({ match }) => {
+  const [editing, setEditing] = useState(false);
+  const [scoreA, setScoreA] = useState(match.result?.teamAScore ?? '');
+  const [scoreB, setScoreB] = useState(match.result?.teamBScore ?? '');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const getWinner = (a, b) => a > b ? 'teamA' : b > a ? 'teamB' : 'draw';
+  const flag = match.league === 'CR' ? '🇨🇷' : '🇲🇽';
+
+  const saveEdit = async () => {
+    if (scoreA === '' || scoreB === '') return;
+    setSaving(true); setMsg('');
+    try {
+      const a = parseInt(scoreA), b = parseInt(scoreB);
+      const result = { teamAScore: a, teamBScore: b, winner: getWinner(a, b) };
+      await updateDoc(doc(db, 'flashMatches', match.id), { result });
+      await recalcularPuntosLiga(match.id, { ...match, result });
+      setMsg('✓ Corregido y puntos recalculados'); setEditing(false);
+    } catch (e) { setMsg('Error: ' + e.message); } finally { setSaving(false); }
+  };
+
+  if (!editing) return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+      <span>{flag} {match.teamA} vs {match.teamB}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: 'var(--navy)' }}>{match.result.teamAScore} - {match.result.teamBScore}</span>
+        <button onClick={() => setEditing(true)} style={{ fontSize: 14, padding: '2px 8px', borderRadius: 20, cursor: 'pointer', border: 'none', background: '#e0e7ff', color: '#3730a3' }}>✏️</button>
+        <button onClick={async () => { if (window.confirm(`¿Eliminar ${match.teamA} vs ${match.teamB}?`)) await deleteDoc(doc(db, 'flashMatches', match.id)); }} style={{ fontSize: 14, padding: '2px 8px', borderRadius: 20, cursor: 'pointer', border: 'none', background: '#fee2e2', color: '#991b1b' }}>🗑️</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ border: '1px solid #e0e7ff', borderRadius: 10, padding: 12, marginBottom: 8, background: '#f8f9ff' }}>
+      <div style={{ fontWeight: 500, fontSize: 13, marginBottom: 8 }}>✏️ Corregir: {flag} {match.teamA} vs {match.teamB}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <input className="score-input" type="number" min="0" max="20" value={scoreA} onChange={e => setScoreA(e.target.value)} />
+        <span className="score-dash">-</span>
+        <input className="score-input" type="number" min="0" max="20" value={scoreB} onChange={e => setScoreB(e.target.value)} />
+        <button onClick={saveEdit} disabled={saving} style={{ flex: 1, padding: '8px 12px', background: 'var(--navy)', color: '#fff', border: 'none', borderRadius: 8, fontFamily: "'Bebas Neue', sans-serif", fontSize: 15, cursor: 'pointer' }}>
+          {saving ? '...' : 'Guardar'}
+        </button>
+        <button onClick={() => setEditing(false)} style={{ padding: '8px', background: '#f1f5f9', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
+      </div>
+      {msg && <div style={{ fontSize: 12, color: 'green', marginTop: 6, fontWeight: 500 }}>{msg}</div>}
+    </div>
+  );
+};
+
+// --- Liga: Gestión de accesos ---
+const LigaAccesosSubTab = ({ users, flashAccessRequests }) => {
+  const [savingId, setSavingId] = useState(null);
+
+  const toggleAccess = async (userId, current) => {
+    setSavingId(userId);
+    await setDoc(doc(db, 'users', userId), { flashAccess: !current }, { merge: true });
+    setSavingId(null);
+  };
+
+  const fmtDate = (ts) => {
+    if (!ts) return '—';
+    try {
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      return d.toLocaleDateString('es-CR', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch { return '—'; }
+  };
+
+  const pending  = flashAccessRequests.filter(req => !users.find(u => u.id === req.id)?.flashAccess);
+  const approved = flashAccessRequests.filter(req =>  users.find(u => u.id === req.id)?.flashAccess === true);
+
+  const renderRow = (req) => {
+    const u = users.find(u => u.id === req.id);
+    const hasAccess = u?.flashAccess === true;
+    return (
+      <div key={req.id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px', marginBottom: 8, background: hasAccess ? '#f0fdf4' : '#fff' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--navy)' }}>{u?.displayName || 'Sin nombre'}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u?.email || req.id}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Solicitó: {fmtDate(req.requestedAt)}</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+            <div
+              onClick={() => savingId !== req.id && toggleAccess(req.id, hasAccess)}
+              style={{ width: 44, height: 24, borderRadius: 12, background: hasAccess ? '#15803d' : '#cbd5e1', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', opacity: savingId === req.id ? 0.6 : 1 }}
+            >
+              <div style={{ position: 'absolute', top: 2, left: hasAccess ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+            </div>
+            <span style={{ fontSize: 10, color: hasAccess ? '#15803d' : '#94a3b8', fontWeight: 600 }}>{hasAccess ? 'Con acceso' : 'Sin acceso'}</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (flashAccessRequests.length === 0) return (
+    <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-muted)', fontSize: 14 }}>
+      No hay solicitudes de acceso aún.
+    </div>
+  );
+
+  return (
+    <div>
+      {pending.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: '#991b1b', marginBottom: 10 }}>⏳ Pendientes ({pending.length})</div>
+          {pending.map(renderRow)}
+        </div>
+      )}
+      {approved.length > 0 && (
+        <div>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: '#15803d', marginBottom: 10 }}>✅ Con acceso ({approved.length})</div>
+          {approved.map(renderRow)}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- Liga Tab (contenedor con sub-tabs) ---
+const LigaTab = ({ users, flashAccessRequests }) => {
+  const [subTab, setSubTab] = useState('partidos');
+  const [flashMatches, setFlashMatches] = useState([]);
+  const [saving, setSaving] = useState({});
+
+  useEffect(() => {
+    const q = query(collection(db, 'flashMatches'), orderBy('date', 'asc'));
+    return onSnapshot(q, snap => setFlashMatches(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+  }, []);
+
+  const pendingAccesos = flashAccessRequests.filter(req => !users.find(u => u.id === req.id)?.flashAccess).length;
+  const pending = flashMatches.filter(m => !m.result);
+  const done    = flashMatches.filter(m =>  m.result);
+
+  const byLeague = (arr, league) => arr.filter(m => m.league === league);
+
+  const toggleMatch = async (match) => {
+    setSaving(s => ({ ...s, [match.id]: true }));
+    await updateDoc(doc(db, 'flashMatches', match.id), { isOpen: !match.isOpen });
+    setSaving(s => ({ ...s, [match.id]: false }));
+  };
+
+  const subTabs = [
+    { key: 'partidos',    label: 'Partidos' },
+    { key: 'resultados',  label: 'Resultados' },
+    { key: 'accesos',     label: pendingAccesos > 0 ? `Accesos 🔴${pendingAccesos}` : 'Accesos' },
+  ];
+
+  const SectionLabel = ({ label }) => (
+    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-mid)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>{label}</div>
+  );
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: 'var(--navy)' }}>Liga CR / MX</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', background: '#f1f5f9', borderRadius: 20, padding: '2px 10px' }}>
+          {flashMatches.length} partido{flashMatches.length !== 1 ? 's' : ''}
+        </div>
+      </div>
+
+      {/* Sub-tabs */}
+      <div style={{ display: 'flex', marginBottom: 18, borderBottom: '2px solid var(--border)' }}>
+        {subTabs.map(st => (
+          <button
+            key={st.key}
+            onClick={() => setSubTab(st.key)}
+            style={{
+              padding: '8px 16px', border: 'none',
+              borderBottom: subTab === st.key ? '2px solid var(--navy)' : '2px solid transparent',
+              background: 'transparent',
+              color: subTab === st.key ? 'var(--navy)' : 'var(--text-muted)',
+              fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600,
+              cursor: 'pointer', marginBottom: -2,
+            }}
+          >
+            {st.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Partidos: agregar + abrir/cerrar ── */}
+      {subTab === 'partidos' && (
+        <div>
+          <LigaAddMatchForm />
+
+          {flashMatches.length > 0 && (
+            <div className="admin-section" style={{ marginTop: 16 }}>
+              <div className="admin-section-title">📋 Partidos</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, fontStyle: 'italic' }}>
+                Verde = abierto · Gris = cerrado
+              </div>
+
+              {/* Pendientes */}
+              {pending.length > 0 && (
+                <>
+                  {byLeague(pending, 'CR').length > 0 && (
+                    <><SectionLabel label="🇨🇷 Costa Rica" />
+                      {byLeague(pending, 'CR').map(m => (
+                        <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', marginBottom: 6, borderRadius: 8, background: m.isOpen ? '#f0fdf4' : '#f8fafc', border: `1px solid ${m.isOpen ? '#86efac' : 'var(--border)'}` }}>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--navy)' }}>{m.teamA} <span style={{ color: 'var(--text-muted)' }}>vs</span> {m.teamB}</div>
+                            {m.date && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{m.date.slice(0, 16).replace('T', ' ')}</div>}
+                          </div>
+                          <button onClick={() => toggleMatch(m)} disabled={saving[m.id]} style={{ fontSize: 11, padding: '5px 14px', borderRadius: 20, cursor: 'pointer', border: 'none', fontWeight: 600, marginLeft: 10, background: m.isOpen ? '#15803d' : '#e2e8f0', color: m.isOpen ? '#fff' : '#475569', opacity: saving[m.id] ? 0.6 : 1 }}>
+                            {saving[m.id] ? '...' : m.isOpen ? '🟢 Abierto' : 'Cerrado'}
+                          </button>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {byLeague(pending, 'MX').length > 0 && (
+                    <div style={{ marginTop: byLeague(pending, 'CR').length > 0 ? 14 : 0 }}>
+                      <SectionLabel label="🇲🇽 México" />
+                      {byLeague(pending, 'MX').map(m => (
+                        <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', marginBottom: 6, borderRadius: 8, background: m.isOpen ? '#f0fdf4' : '#f8fafc', border: `1px solid ${m.isOpen ? '#86efac' : 'var(--border)'}` }}>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--navy)' }}>{m.teamA} <span style={{ color: 'var(--text-muted)' }}>vs</span> {m.teamB}</div>
+                            {m.date && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{m.date.slice(0, 16).replace('T', ' ')}</div>}
+                          </div>
+                          <button onClick={() => toggleMatch(m)} disabled={saving[m.id]} style={{ fontSize: 11, padding: '5px 14px', borderRadius: 20, cursor: 'pointer', border: 'none', fontWeight: 600, marginLeft: 10, background: m.isOpen ? '#15803d' : '#e2e8f0', color: m.isOpen ? '#fff' : '#475569', opacity: saving[m.id] ? 0.6 : 1 }}>
+                            {saving[m.id] ? '...' : m.isOpen ? '🟢 Abierto' : 'Cerrado'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Ya con resultado */}
+              {done.length > 0 && (
+                <div style={{ marginTop: pending.length > 0 ? 16 : 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 8px' }}>
+                    <div style={{ flex: 1, height: 1, background: '#86efac' }} />
+                    <span style={{ fontSize: 12, color: '#15803d', fontWeight: 700, padding: '0 6px', background: 'var(--surface)' }}>✅ Con resultado ({done.length})</span>
+                    <div style={{ flex: 1, height: 1, background: '#86efac' }} />
+                  </div>
+                  {done.map(m => (
+                    <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+                      <span>{m.league === 'CR' ? '🇨🇷' : '🇲🇽'} {m.teamA} vs {m.teamB}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: 'var(--navy)' }}>{m.result.teamAScore} - {m.result.teamBScore}</span>
+                        <button onClick={async () => { if (window.confirm(`¿Eliminar ${m.teamA} vs ${m.teamB}?`)) await deleteDoc(doc(db, 'flashMatches', m.id)); }} style={{ fontSize: 14, padding: '2px 8px', borderRadius: 20, cursor: 'pointer', border: 'none', background: '#fee2e2', color: '#991b1b' }}>🗑️</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Resultados ── */}
+      {subTab === 'resultados' && (
+        <div>
+          {pending.length === 0 && (
+            <div style={{ textAlign: 'center', padding: 30, color: 'var(--text-muted)', fontSize: 14 }}>No hay partidos pendientes de resultado</div>
+          )}
+
+          {byLeague(pending, 'CR').length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 16, color: 'var(--navy)', marginBottom: 10 }}>🇨🇷 Costa Rica</div>
+              {byLeague(pending, 'CR').map(m => <LigaMatchResultEntry key={m.id} match={m} />)}
+            </div>
+          )}
+          {byLeague(pending, 'MX').length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 16, color: 'var(--navy)', marginBottom: 10 }}>🇲🇽 México</div>
+              {byLeague(pending, 'MX').map(m => <LigaMatchResultEntry key={m.id} match={m} />)}
+            </div>
+          )}
+
+          {done.length > 0 && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0 8px' }}>
+                <div style={{ flex: 1, height: 1, background: '#86efac' }} />
+                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 13, color: '#15803d', padding: '0 8px', background: 'var(--surface)' }}>✅ Ya con resultado ({done.length})</span>
+                <div style={{ flex: 1, height: 1, background: '#86efac' }} />
+              </div>
+              {done.map(m => <LigaCompletedMatchRow key={m.id} match={m} />)}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Accesos ── */}
+      {subTab === 'accesos' && (
+        <LigaAccesosSubTab users={users} flashAccessRequests={flashAccessRequests} />
+      )}
+    </div>
+  );
+};
+
 // --- Main Admin Page ---
 const AdminPage = () => {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
   const [matches, setMatches] = useState([]);
   const [users, setUsers] = useState([]);
+  const [flashAccessRequests, setFlashAccessRequests] = useState([]);
   const [tab, setTab] = useState('results');
 
   useEffect(() => {
@@ -1756,14 +2183,22 @@ const AdminPage = () => {
     });
   }, []);
 
+  useEffect(() => {
+    return onSnapshot(collection(db, 'flashAccessRequests'), snap => {
+      setFlashAccessRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+  }, []);
+
   const openMatches = matches.filter(m => !m.result);
   const pendingCount = users.filter(u => !u.isPaid).length;
+  const accesosPendingCount = flashAccessRequests.filter(req => !users.find(u => u.id === req.id)?.flashAccess).length;
 
   const tabs = [
     { key: 'results',   label: 'Resultados' },
     { key: 'abrir',     label: '📅 Abrir' },
     { key: 'reportes',  label: '📊 Reportes' },
     { key: 'flash',     label: 'Flash ⚡' },
+    { key: 'liga',      label: accesosPendingCount > 0 ? `Liga 🏆🔴${accesosPendingCount}` : 'Liga 🏆' },
     { key: 'jugadores', label: pendingCount > 0 ? `Jugadores 🔴${pendingCount}` : 'Jugadores' },
     { key: 'anuncios',  label: 'Anuncios 📢' },
   ];
@@ -1796,6 +2231,7 @@ const AdminPage = () => {
         {tab === 'abrir' && <AbrirPartidosTab matches={matches} />}
         {tab === 'reportes' && <ReportesTab matches={matches} users={users} />}
         {tab === 'flash' && <AddFlashForm matches={matches} />}
+        {tab === 'liga' && <LigaTab users={users} flashAccessRequests={flashAccessRequests} />}
         {tab === 'jugadores' && <JugadoresTab />}
         {tab === 'anuncios' && (
           <>
