@@ -523,7 +523,7 @@ const LigaSection = ({ userId, userProfile }) => {
       {/* Header */}
       <div style={{ background: 'var(--navy)', padding: '14px 16px' }}>
         <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: 'var(--gold-light)', letterSpacing: '0.04em', lineHeight: 1 }}>
-          Quiniela UNAFUT y Liga MX ⚽
+          Liga BBVA MX ⚽
         </div>
         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>
           Finales y Semifinales · Mayo 2025
