@@ -104,8 +104,8 @@ const TeamLogo = ({ team, size = 44 }) => {
 const LigaMatchCard = ({ match, userId, displayName }) => {
   const [expanded, setExpanded]     = useState(true);
   const [localPred, setLocalPred]   = useState(null);
-  const [scoreA, setScoreA]         = useState(null);
-  const [scoreB, setScoreB]         = useState(null);
+  const [scoreA, setScoreA]         = useState(0);
+  const [scoreB, setScoreB]         = useState(0);
   const [saved, setSaved]           = useState(false);
   const [saving, setSaving]         = useState(false);
   const [prediction, setPrediction] = useState(null);
@@ -123,8 +123,8 @@ const LigaMatchCard = ({ match, userId, displayName }) => {
         const d = snap.data();
         setPrediction(d);
         setLocalPred(d.result);
-        setScoreA(d.teamAScore ?? null);
-        setScoreB(d.teamBScore ?? null);
+        setScoreA(d.teamAScore ?? 0);
+        setScoreB(d.teamBScore ?? 0);
       }
     });
   }, [predId, userId]);
