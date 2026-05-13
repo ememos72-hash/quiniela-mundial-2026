@@ -195,6 +195,11 @@ const LigaMatchCard = ({ match, userId, displayName }) => {
             <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{expanded ? '▲' : '▼'}</span>
           </div>
         </div>
+        {match.stadium && (
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, paddingBottom: 16 }}>
+            📍 {match.stadium}
+          </div>
+        )}
 
         {/* Teams */}
         <div className="teams-row">

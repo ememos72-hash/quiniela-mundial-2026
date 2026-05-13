@@ -1755,7 +1755,7 @@ const LigaAddMatchForm = () => {
   const crTeams = Object.keys(LIGA_TEAMS).filter(t => LIGA_TEAMS[t].league === 'CR');
   const mxTeams = Object.keys(LIGA_TEAMS).filter(t => LIGA_TEAMS[t].league === 'MX');
   const allTeams = Object.keys(LIGA_TEAMS);
-  const [form, setForm] = useState({ teamA: allTeams[0], teamB: allTeams[1], date: '', isOpen: true });
+  const [form, setForm] = useState({ teamA: allTeams[0], teamB: allTeams[1], date: '', stadium: '', isOpen: true });
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -1769,10 +1769,11 @@ const LigaAddMatchForm = () => {
       await addDoc(collection(db, 'flashMatches'), {
         teamA: form.teamA, teamB: form.teamB,
         league: leagueA, date: form.date,
+        stadium: form.stadium.trim() || null,
         phase: 'semis', // necesario para que se aplique el bonus de marcador exacto
         isOpen: form.isOpen, result: null, createdAt: serverTimestamp(),
       });
-      setForm(f => ({ ...f, teamA: allTeams[0], teamB: allTeams[1], date: '' }));
+      setForm(f => ({ ...f, teamA: allTeams[0], teamB: allTeams[1], date: '', stadium: '' }));
     } finally { setSaving(false); }
   };
 
@@ -1798,6 +1799,10 @@ const LigaAddMatchForm = () => {
       <div className="form-group">
         <label className="form-label">Fecha y hora</label>
         <input className="form-input" type="datetime-local" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+      </div>
+      <div className="form-group">
+        <label className="form-label">Estadio (opcional)</label>
+        <input className="form-input" type="text" placeholder="Ej: Estadio Ricardo Saprissa" value={form.stadium} onChange={e => setForm(f => ({ ...f, stadium: e.target.value }))} />
       </div>
       <div className="form-group">
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>

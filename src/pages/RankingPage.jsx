@@ -7,7 +7,7 @@ import GroupRankingModal from '../components/GroupRankingModal';
 
 const RankingPage = () => {
   const { user, isAdmin } = useAuth();
-  const [tab, setTab]                       = useState('mundial');
+  const [tab, setTab]                       = useState('liga');
   const [players, setPlayers]               = useState([]);
   const [loading, setLoading]               = useState(true);
   const [rankingVisible, setRankingVisible] = useState(true);
