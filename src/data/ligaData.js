@@ -12,6 +12,6 @@ export const LIGA_TEAMS = {
 };
 
 export const LIGA_LEAGUE_LABELS = {
-  CR: '🇨🇷 Costa Rica — Apertura',
-  MX: '🇲🇽 México — Liga MX',
+  CR: '🇨🇷 UNAFUT',
+  MX: '🇲🇽 Liga BBVA MX',
 };

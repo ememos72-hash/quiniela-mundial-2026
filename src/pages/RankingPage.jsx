@@ -131,7 +131,7 @@ const RankingPage = () => {
       {/* Tabs */}
       <div style={{ display: 'flex', marginBottom: 20, borderBottom: '2px solid var(--border)' }}>
         {[
-          { key: 'liga',    label: '🇨🇷 UNAFUT / Liga MX 🇲🇽' },
+          { key: 'liga',    label: '🇨🇷 UNAFUT / Liga BBVA MX 🇲🇽' },
           { key: 'mundial', label: '🏆 Mundial 2026' },
         ].map(t => (
           <button
