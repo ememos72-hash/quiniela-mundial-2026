@@ -85,6 +85,9 @@ const RankingPage = () => {
     setLigaLoading(false);
   };
 
+  // Cargar Liga al montar (tab por defecto es 'liga')
+  useEffect(() => { loadLigaRanking(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const posClass = (i) => {
     if (i === 0) return 'gold';
     if (i === 1) return 'silver';
