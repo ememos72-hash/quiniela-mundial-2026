@@ -12,5 +12,23 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <!-- Twemoji: renderiza banderas/emojis como imágenes SVG en todos los navegadores -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/twemoji.min.js" crossorigin="anonymous"></script>
+    <script>
+      // Aplica Twemoji al cargar y cada vez que el DOM cambie
+      function applyTwemoji() {
+        twemoji.parse(document.body, {
+          folder: 'svg',
+          ext: '.svg',
+          base: 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/'
+        });
+      }
+      document.addEventListener('DOMContentLoaded', applyTwemoji);
+      // Re-aplica cuando React actualiza el DOM
+      const _observer = new MutationObserver(applyTwemoji);
+      document.addEventListener('DOMContentLoaded', () => {
+        _observer.observe(document.getElementById('root'), { childList: true, subtree: true });
+      });
+    </script>
   </body>
 </html>

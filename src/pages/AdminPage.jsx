@@ -68,9 +68,12 @@ const recalcularPuntosLiga = async (matchId, matchConResultado) => {
     query(collection(db, 'flashPredictions'), where('matchId', '==', matchId))
   );
   if (predsSnap.empty) return;
+  // Los partidos de Liga no tienen 'phase'; forzamos 'semis' para que
+  // calculatePredictionPoints aplique el bonus de marcador exacto (+5 pts)
+  const matchParaCalculo = { ...matchConResultado, phase: matchConResultado.phase || 'semis' };
   const batch = writeBatch(db);
   for (const predDoc of predsSnap.docs) {
-    const pts = calculatePredictionPoints(predDoc.data(), matchConResultado);
+    const pts = calculatePredictionPoints(predDoc.data(), matchParaCalculo);
     batch.update(predDoc.ref, { pointsAwarded: pts });
   }
   await batch.commit();
@@ -1766,6 +1769,7 @@ const LigaAddMatchForm = () => {
       await addDoc(collection(db, 'flashMatches'), {
         teamA: form.teamA, teamB: form.teamB,
         league: leagueA, date: form.date,
+        phase: 'semis', // necesario para que se aplique el bonus de marcador exacto
         isOpen: form.isOpen, result: null, createdAt: serverTimestamp(),
       });
       setForm(f => ({ ...f, teamA: allTeams[0], teamB: allTeams[1], date: '' }));
@@ -1923,7 +1927,8 @@ const LigaAccesosSubTab = ({ users, flashAccessRequests }) => {
     if (!ts) return '—';
     try {
       const d = ts.toDate ? ts.toDate() : new Date(ts);
-      return d.toLocaleDateString('es-CR', { day: '2-digit', month: 'short', year: 'numeric' });
+      return d.toLocaleDateString('es-CR', { day: '2-digit', month: 'short', year: 'numeric' }) +
+        ' · ' + d.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' });
     } catch { return '—'; }
   };
 
@@ -1973,6 +1978,80 @@ const LigaAccesosSubTab = ({ users, flashAccessRequests }) => {
         <div>
           <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: '#15803d', marginBottom: 10 }}>✅ Con acceso ({approved.length})</div>
           {approved.map(renderRow)}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// --- Liga: Resetear todos los datos ---
+const LigaResetButton = () => {
+  const [status, setStatus] = useState('idle'); // idle | running | done | error
+  const [msg, setMsg] = useState('');
+
+  const resetLiga = async () => {
+    if (!window.confirm(
+      '⚠️ ¿Borrar TODOS los datos de la Liga?\n\n' +
+      'Esto elimina todas las predicciones (flashPredictions) y todas las solicitudes de acceso (flashAccessRequests).\n\n' +
+      'Los partidos (flashMatches) y los accesos de los jugadores (flashAccess) NO se tocan.\n\n' +
+      'Esta acción no se puede deshacer.'
+    )) return;
+
+    setStatus('running'); setMsg('');
+    try {
+      const [predsSnap, reqsSnap] = await Promise.all([
+        getDocs(collection(db, 'flashPredictions')),
+        getDocs(collection(db, 'flashAccessRequests')),
+      ]);
+
+      const batch = writeBatch(db);
+      predsSnap.docs.forEach(d => batch.delete(d.ref));
+      reqsSnap.docs.forEach(d => batch.delete(d.ref));
+
+      // Firestore batch limit = 500 docs; para colecciones grandes habría que iterar
+      // Para este uso (≤ 100 docs) es suficiente con un solo batch
+      await batch.commit();
+
+      // También quitar flashAccess de todos los usuarios
+      const usersWithAccess = await getDocs(
+        query(collection(db, 'users'), where('flashAccess', '==', true))
+      );
+      const batch2 = writeBatch(db);
+      usersWithAccess.docs.forEach(d => batch2.update(d.ref, { flashAccess: false }));
+      await batch2.commit();
+
+      setStatus('done');
+      setMsg(`✅ ${predsSnap.size} predicciones, ${reqsSnap.size} solicitudes y ${usersWithAccess.size} accesos eliminados`);
+    } catch (e) {
+      setStatus('error');
+      setMsg('Error: ' + e.message);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 24, borderTop: '2px dashed #fca5a5', paddingTop: 20 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+        ⚠️ Zona de peligro
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+        Borra todas las predicciones, solicitudes de acceso y permisos Liga de los jugadores. Útil para limpiar datos de prueba o reiniciar la quiniela entre torneos.
+      </div>
+      <button
+        onClick={resetLiga}
+        disabled={status === 'running'}
+        style={{
+          padding: '10px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
+          background: status === 'done' ? '#15803d' : '#991b1b',
+          color: '#fff', fontWeight: 600, fontSize: 13,
+          fontFamily: "'DM Sans', sans-serif",
+          opacity: status === 'running' ? 0.7 : 1,
+        }}
+      >
+        {status === 'running' ? '⏳ Borrando...' : '🗑️ Resetear todos los datos Liga'}
+      </button>
+      {msg && (
+        <div style={{ marginTop: 10, fontSize: 13, color: status === 'done' ? '#15803d' : '#991b1b', fontWeight: 600 }}>
+          {msg}
         </div>
       )}
     </div>
@@ -2112,6 +2191,8 @@ const LigaTab = ({ users, flashAccessRequests }) => {
               )}
             </div>
           )}
+
+          <LigaResetButton />
         </div>
       )}
 
