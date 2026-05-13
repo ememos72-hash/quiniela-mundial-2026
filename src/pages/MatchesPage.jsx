@@ -391,8 +391,8 @@ const MatchCountdown = ({ date }) => {
 const MatchCard = ({ match, userId, allUsers, userPrediction, hideCommunityPicks = false, hideStatus = false, hideInteraction = false }) => {
   const [prediction, setPrediction] = useState(null);
   const [localPred, setLocalPred]   = useState(null);
-  const [scoreA, setScoreA]         = useState(null);
-  const [scoreB, setScoreB]         = useState(null);
+  const [scoreA, setScoreA]         = useState(0);
+  const [scoreB, setScoreB]         = useState(0);
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
   const [showPicks, setShowPicks]       = useState(false);
@@ -406,8 +406,8 @@ const MatchCard = ({ match, userId, allUsers, userPrediction, hideCommunityPicks
     if (!userPrediction) return;
     setPrediction(userPrediction);
     setLocalPred(userPrediction.result);
-    if (userPrediction.teamAScore !== undefined) setScoreA(userPrediction.teamAScore);
-    if (userPrediction.teamBScore !== undefined) setScoreB(userPrediction.teamBScore);
+    setScoreA(userPrediction.teamAScore ?? 0);
+    setScoreB(userPrediction.teamBScore ?? 0);
   }, [userPrediction?.updatedAt, userPrediction?.matchId]);
 
   const savePrediction = async () => {
