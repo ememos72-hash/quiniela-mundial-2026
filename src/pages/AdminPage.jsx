@@ -1937,8 +1937,13 @@ const LigaAccesosSubTab = ({ users, flashAccessRequests }) => {
     } catch { return '—'; }
   };
 
-  const pending  = flashAccessRequests.filter(req => !users.find(u => u.id === req.id)?.flashAccess);
-  const approved = flashAccessRequests.filter(req =>  users.find(u => u.id === req.id)?.flashAccess === true);
+  const sortByDate = (a, b) => {
+    const ta = a.requestedAt?.toDate?.() ?? new Date(0);
+    const tb = b.requestedAt?.toDate?.() ?? new Date(0);
+    return tb - ta;
+  };
+  const pending  = flashAccessRequests.filter(req => !users.find(u => u.id === req.id)?.flashAccess).sort(sortByDate);
+  const approved = flashAccessRequests.filter(req =>  users.find(u => u.id === req.id)?.flashAccess === true).sort(sortByDate);
 
   const renderRow = (req) => {
     const u = users.find(u => u.id === req.id);

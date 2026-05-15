@@ -102,7 +102,7 @@ const TeamLogo = ({ team, size = 44 }) => {
 // ── Liga: match card ──────────────────────────────────────────────────────────
 
 const LigaMatchCard = ({ match, userId, displayName }) => {
-  const [expanded, setExpanded]     = useState(true);
+  const [expanded, setExpanded]     = useState(!match.result); // finalizados arrancan colapsados
   const [localPred, setLocalPred]   = useState(null);
   const [scoreA, setScoreA]         = useState(0);
   const [scoreB, setScoreB]         = useState(0);
@@ -177,45 +177,62 @@ const LigaMatchCard = ({ match, userId, displayName }) => {
 
   return (
     <div className="match-card" style={{ marginBottom: 10 }}>
-      {/* Header acordeón — siempre visible */}
+      {/* Header acordeón — siempre visible, compacto si está finalizado y colapsado */}
       <div
         onClick={() => setExpanded(e => !e)}
         style={{ cursor: 'pointer', userSelect: 'none' }}
       >
-        {/* Meta */}
-        <div className="match-meta">
-          <div className="match-meta-left">
-            {leagueLabel && <span className="match-group-badge">{leagueLabel}</span>}
-            {dateStr && <span>{dateStr}</span>}
+        {/* Vista compacta: solo para finalizados colapsados */}
+        {match.result && !expanded ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '2px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+              {leagueLabel && <span className="match-group-badge" style={{ flexShrink: 0 }}>{leagueLabel}</span>}
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--navy)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {match.teamA} <span style={{ color: 'var(--gold)' }}>{match.result.teamAScore}–{match.result.teamBScore}</span> {match.teamB}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              <span className="badge-played">Finalizado</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>▼</span>
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {!match.isOpen && !match.result && <span className="badge-closed">Cerrado</span>}
-            {match.isOpen && !match.result && <span className="badge-open">Abierto</span>}
-            {match.result && <span className="badge-played">Finalizado</span>}
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{expanded ? '▲' : '▼'}</span>
-          </div>
-        </div>
-        {match.stadium && (
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, paddingBottom: 16 }}>
-            📍 {match.stadium}
-          </div>
+        ) : (
+          <>
+            {/* Meta completa */}
+            <div className="match-meta">
+              <div className="match-meta-left">
+                {leagueLabel && <span className="match-group-badge">{leagueLabel}</span>}
+                {dateStr && <span>{dateStr}</span>}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {!match.isOpen && !match.result && <span className="badge-closed">Cerrado</span>}
+                {match.isOpen && !match.result && <span className="badge-open">Abierto</span>}
+                {match.result && <span className="badge-played">Finalizado</span>}
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{expanded ? '▲' : '▼'}</span>
+              </div>
+            </div>
+            {match.stadium && (
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, paddingBottom: 16 }}>
+                📍 {match.stadium}
+              </div>
+            )}
+            {/* Teams */}
+            <div className="teams-row">
+              <div className="team-side">
+                <TeamLogo team={match.teamA} size={48} />
+                <span className="team-name">{match.teamA}</span>
+              </div>
+              {match.result
+                ? <span className="score-display">{match.result.teamAScore} - {match.result.teamBScore}</span>
+                : <span style={{ fontSize: 13, color: 'var(--text-muted)', padding: '0 4px' }}>vs</span>
+              }
+              <div className="team-side">
+                <TeamLogo team={match.teamB} size={48} />
+                <span className="team-name">{match.teamB}</span>
+              </div>
+            </div>
+          </>
         )}
-
-        {/* Teams */}
-        <div className="teams-row">
-          <div className="team-side">
-            <TeamLogo team={match.teamA} size={48} />
-            <span className="team-name">{match.teamA}</span>
-          </div>
-          {match.result
-            ? <span className="score-display">{match.result.teamAScore} - {match.result.teamBScore}</span>
-            : <span style={{ fontSize: 13, color: 'var(--text-muted)', padding: '0 4px' }}>vs</span>
-          }
-          <div className="team-side">
-            <TeamLogo team={match.teamB} size={48} />
-            <span className="team-name">{match.teamB}</span>
-          </div>
-        </div>
       </div>
 
       {/* Contenido expandible */}
@@ -511,8 +528,14 @@ const LigaSection = ({ userId, userProfile }) => {
     setSending(false);
   };
 
-  const crMatches = matches.filter(m => m.league === 'CR');
-  const mxMatches = matches.filter(m => m.league === 'MX');
+  // Abiertos primero, luego cerrados sin resultado, luego finalizados — dentro de cada grupo por fecha desc
+  const sortMatches = (list) => list.sort((a, b) => {
+    const order = (m) => m.result ? 2 : m.isOpen ? 0 : 1;
+    if (order(a) !== order(b)) return order(a) - order(b);
+    return new Date(b.date) - new Date(a.date);
+  });
+  const crMatches = sortMatches(matches.filter(m => m.league === 'CR'));
+  const mxMatches = sortMatches(matches.filter(m => m.league === 'MX'));
 
   return (
     <div style={{

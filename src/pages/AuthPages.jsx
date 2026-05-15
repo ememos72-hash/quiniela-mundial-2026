@@ -132,6 +132,7 @@ export const RegisterPage = () => {
   const [nombre,   setNombre]   = useState('');
   const [apellido, setApellido] = useState('');
   const [email, setEmail]       = useState('');
+  const [countryCode, setCountryCode] = useState('+506');
   const [phone, setPhone]       = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm]   = useState('');
@@ -144,13 +145,14 @@ export const RegisterPage = () => {
     if (!nombre.trim())   return setError('Ingresa tu nombre');
     if (!apellido.trim()) return setError('Ingresa tu apellido');
     const cleanPhone = phone.replace(/\D/g, '');
-    if (cleanPhone.length !== 8) return setError('El teléfono debe tener 8 dígitos (ej: 83871924 o 8387-1924)');
+    if (cleanPhone.length < 5) return setError('Ingresa un número de teléfono válido');
     if (password !== confirm) return setError('Las contraseñas no coinciden');
     if (password.length < 6) return setError('La contraseña debe tener al menos 6 caracteres');
     setLoading(true);
     try {
       const displayName = `${nombre.trim()} ${apellido.trim()}`;
-      await register(email, password, displayName, cleanPhone);
+      const fullPhone = `${countryCode}${cleanPhone}`;
+      await register(email, password, displayName, fullPhone);
       navigate('/inicio');
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') setError('Este correo ya está registrado');
@@ -208,14 +210,59 @@ export const RegisterPage = () => {
           </div>
           <div className="form-group">
             <label className="form-label">Teléfono / WhatsApp</label>
-            <input
-              className="form-input"
-              type="tel"
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              placeholder="Ej: 83871924 o 8387-1924"
-              required
-            />
+            <div style={{ display: 'flex', gap: 6 }}>
+              <select
+                className="form-input"
+                value={countryCode}
+                onChange={e => setCountryCode(e.target.value)}
+                style={{ flex: '0 0 auto', width: 110 }}
+                required
+              >
+                <option value="+506">🇨🇷 +506</option>
+                <option value="+1">🇺🇸 +1</option>
+                <option value="+52">🇲🇽 +52</option>
+                <option value="+502">🇬🇹 +502</option>
+                <option value="+503">🇸🇻 +503</option>
+                <option value="+504">🇭🇳 +504</option>
+                <option value="+505">🇳🇮 +505</option>
+                <option value="+507">🇵🇦 +507</option>
+                <option value="+53">🇨🇺 +53</option>
+                <option value="+57">🇨🇴 +57</option>
+                <option value="+58">🇻🇪 +58</option>
+                <option value="+51">🇵🇪 +51</option>
+                <option value="+593">🇪🇨 +593</option>
+                <option value="+56">🇨🇱 +56</option>
+                <option value="+54">🇦🇷 +54</option>
+                <option value="+595">🇵🇾 +595</option>
+                <option value="+598">🇺🇾 +598</option>
+                <option value="+591">🇧🇴 +591</option>
+                <option value="+55">🇧🇷 +55</option>
+                <option value="+34">🇪🇸 +34</option>
+                <option value="+44">🇬🇧 +44</option>
+                <option value="+49">🇩🇪 +49</option>
+                <option value="+33">🇫🇷 +33</option>
+                <option value="+39">🇮🇹 +39</option>
+                <option value="+31">🇳🇱 +31</option>
+                <option value="+351">🇵🇹 +351</option>
+                <option value="+81">🇯🇵 +81</option>
+                <option value="+82">🇰🇷 +82</option>
+                <option value="+86">🇨🇳 +86</option>
+                <option value="+91">🇮🇳 +91</option>
+                <option value="+61">🇦🇺 +61</option>
+              </select>
+              <input
+                className="form-input"
+                type="tel"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                placeholder="Número"
+                required
+                style={{ flex: 1 }}
+              />
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+              Costa Rica: +506 · Ingresa solo el número sin código
+            </div>
           </div>
           <div className="form-group">
             <label className="form-label">Contraseña</label>
