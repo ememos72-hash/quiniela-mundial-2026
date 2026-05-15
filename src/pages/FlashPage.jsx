@@ -186,7 +186,6 @@ const LigaMatchCard = ({ match, userId, displayName }) => {
         {match.result && !expanded ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '2px 0' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-              {leagueLabel && <span className="match-group-badge" style={{ flexShrink: 0 }}>{leagueLabel}</span>}
               <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--navy)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {match.teamA} <span style={{ color: 'var(--gold)' }}>{match.result.teamAScore}–{match.result.teamBScore}</span> {match.teamB}
               </span>
@@ -201,7 +200,6 @@ const LigaMatchCard = ({ match, userId, displayName }) => {
             {/* Meta completa */}
             <div className="match-meta">
               <div className="match-meta-left">
-                {leagueLabel && <span className="match-group-badge">{leagueLabel}</span>}
                 {dateStr && <span>{dateStr}</span>}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -546,7 +544,7 @@ const LigaSection = ({ userId, userProfile }) => {
       {/* Header */}
       <div style={{ background: 'var(--navy)', padding: '14px 16px' }}>
         <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: 'var(--gold-light)', letterSpacing: '0.04em', lineHeight: 1 }}>
-          Quiniela UNAFUT y Liga BBVA MX ⚽
+          UNAFUT y BBVA MX ⚽
         </div>
         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>
           Finales y Semifinales · Mayo 2025
@@ -620,6 +618,7 @@ const LigaSection = ({ userId, userProfile }) => {
                 }}>
                   <span style={{ fontSize: 18 }}>🇨🇷</span>
                   <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 16, color: '#15803d', letterSpacing: '0.04em' }}>Costa Rica</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#15803d', background: '#bbf7d0', borderRadius: 6, padding: '2px 7px', letterSpacing: '0.03em' }}>UNAFUT</span>
                   <span style={{ fontSize: 11, color: '#16a34a', marginLeft: 'auto' }}>{crMatches.length} partido{crMatches.length !== 1 ? 's' : ''}</span>
                 </div>
                 <div style={{ border: '1px solid #86efac', borderTop: 'none', borderRadius: '0 0 10px 10px', padding: '10px 10px 4px' }}>
@@ -640,6 +639,7 @@ const LigaSection = ({ userId, userProfile }) => {
                 }}>
                   <span style={{ fontSize: 18 }}>🇲🇽</span>
                   <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 16, color: '#dc2626', letterSpacing: '0.04em' }}>México</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#dc2626', background: '#fee2e2', borderRadius: 6, padding: '2px 7px', letterSpacing: '0.03em' }}>Liga BBVA MX</span>
                   <span style={{ fontSize: 11, color: '#ef4444', marginLeft: 'auto' }}>{mxMatches.length} partido{mxMatches.length !== 1 ? 's' : ''}</span>
                 </div>
                 <div style={{ border: '1px solid #fca5a5', borderTop: 'none', borderRadius: '0 0 10px 10px', padding: '10px 10px 4px' }}>
