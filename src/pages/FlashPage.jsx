@@ -530,7 +530,9 @@ const LigaSection = ({ userId, userProfile }) => {
   const sortMatches = (list) => list.sort((a, b) => {
     const order = (m) => m.result ? 2 : m.isOpen ? 0 : 1;
     if (order(a) !== order(b)) return order(a) - order(b);
-    return new Date(b.date) - new Date(a.date);
+    // Abiertos/cerrados: más próximo primero (asc). Finalizados: más reciente primero (desc)
+    const asc = order(a) < 2;
+    return asc ? new Date(a.date) - new Date(b.date) : new Date(b.date) - new Date(a.date);
   });
   const crMatches = sortMatches(matches.filter(m => m.league === 'CR'));
   const mxMatches = sortMatches(matches.filter(m => m.league === 'MX'));
