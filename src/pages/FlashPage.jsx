@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   collection, query, orderBy, onSnapshot, getDocs, where,
-  doc, setDoc, getDoc, serverTimestamp,
+  doc, setDoc, getDoc, updateDoc, serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth, ADMIN_UID } from '../contexts/AuthContext';
@@ -508,6 +508,27 @@ const LigaSection = ({ userId, userProfile }) => {
       setLoading(false);
     });
     return unsub;
+  }, [hasAccess]);
+
+  // Auto-cierre: cada minuto revisa si algún partido abierto ya pasó su hora de inicio
+  useEffect(() => {
+    if (!hasAccess) return;
+    const autoClose = async () => {
+      const now = new Date();
+      const openSnap = await getDocs(
+        query(collection(db, 'flashMatches'), where('isOpen', '==', true))
+      );
+      for (const d of openSnap.docs) {
+        const matchDate = new Date(d.data().date);
+        if (matchDate <= now) {
+          await updateDoc(doc(db, 'flashMatches', d.id), { isOpen: false });
+          console.log(`Auto-cerrado: ${d.data().teamA} vs ${d.data().teamB}`);
+        }
+      }
+    };
+    autoClose(); // corre al montar
+    const interval = setInterval(autoClose, 60000); // cada minuto
+    return () => clearInterval(interval);
   }, [hasAccess]);
 
   const requestAccess = async () => {
